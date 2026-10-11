@@ -9,10 +9,13 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>
     <queries><intent><action android:name="android.speech.action.RECOGNIZE_SPEECH"/></intent><intent><action android:name="android.speech.RecognitionService"/></intent><intent><action android:name="android.intent.action.TTS_SERVICE"/></intent></queries>
-    <application android:label="Milo" android:icon="@drawable/milo_icon" android:theme="@style/MiloThemeSystem" android:allowBackup="false" android:usesCleartextTraffic="false" android:supportsRtl="true">
+    <application android:name=".MiloApplication" android:label="Milo" android:icon="@drawable/milo_icon" android:theme="@style/MiloThemeSystem" android:allowBackup="false" android:usesCleartextTraffic="false" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true" android:windowSoftInputMode="adjustResize">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
         </activity>
+        <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false"/>
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false"/>
+        <service android:name=".PeopleMessagingService" android:exported="false"><intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT"/></intent-filter></service>
         <service android:name=".BackgroundVoiceService" android:exported="false" android:foregroundServiceType="microphone"/>
         <service android:name=".FloatingPetService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started floating companion pet overlay with a persistent hide action; no microphone or screen access."/>

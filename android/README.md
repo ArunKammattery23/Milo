@@ -1,4 +1,4 @@
-# Milo Android personal prototype 1.5
+# Milo Android personal prototype 1.6
 
 Local AI is the default; cloud APIs are optional. Android 8 or newer can install the app, but local Gemini Nano requires a phone supported by Android AICore and the ML Kit Prompt API. It has no per-request API fee after the model download. This is not a promise of compatibility with every phone, unlimited inference, zero battery/storage use, or free downloads/data.
 
@@ -53,3 +53,7 @@ Open Setup → Appearance to choose System, Light or Dark. System follows your A
 Talk keeps the existing Milo artwork and uses a spacious conversation area with Speak and Send. Open the ••• menu for web search, spoken replies, hands-free turns, Pause voice, privacy and New conversation. Need a starting point opens suggested topics. Bottom navigation shows Home, Talk, Goals and More; More contains Comfort, Memories and Setup.
 
 Canonical source repository: https://github.com/ArunKammattery23/Milo.git. Use this repository for future Milo changes. Sites publication continues through the existing Sites source workflow.
+
+## People · family and friends
+
+Open More → People to save family/friend names locally. Cross-phone messages require owner activation using [cloud/README.md](../cloud/README.md); this personal APK does not deliver them yet; the owner Firebase project is registered but its server is not activated. Once activated, both people sign in with verified email/password accounts and accept an invitation. Review exact messages before sending, reply, or tap Read aloud. Ask where they are requests their reply; no GPS permission is used. Notifications are opt-in and omit message text. AI keys are unrelated to messaging. Paid anonymous messaging and Google account sign-in are not included.

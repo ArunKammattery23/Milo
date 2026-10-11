@@ -16,3 +16,15 @@
 - Simplified Talk layout built and lint checked; all 10 existing emulator tests passed after redesign. Updated Talk screenshot visually inspected. Milo artwork is unchanged. No live AI or audible voice verification was added in this design update.
 
 - Milo 1.5 adds persistent System, Light and Dark appearance selection for native screens and the built-in Home view; the web companion also has appearance preferences. `assembleDebug` and `lintDebug` passed. No emulator tests were run for this theme change.
+
+
+## Milo 1.6 — People, 11 October 2026
+
+- `assembleDebug`, `lintDebug`, and `assembleDebugAndroidTest` passed with Java 17, SDK 36 and Firebase BoM 34.16.0. BoM 35.0.0 produced an incompatible Kotlin metadata warning in this project's lint tools; the compatible version removes that warning.
+- **11 Android API-35 emulator tests passed** on the final Firebase-configured build. The additional check covers saved local People entries, inactive server status, closing People listeners when navigating away, and absence of location permissions. Prior AI/encryption/voice controls and floating-pet checks remain passing.
+- **8 backend tests passed** using Node 22.23.3, Java 21 and the demo Firestore emulator. Checks cover verified authentication/App Check guards, email-bound/expired/single-use invitations, sender attribution, duplicate concurrent sends, read receipts, blocks/reconnection, quotas, message length, device ownership, deletion/stale tokens and client/cross-account access denials. These tests do not call production, FCM or verification email services.
+- Final APK signature verified; version 1.6 / version code 7. SHA-256: 07333D7DAB2563AC3090BF127744AF9E19EB9B8CD21EBD724AE4FD95CCDD001C.
+- Owner project `milo-aea0c` verified through the authorized Firebase CLI. Android app `life.milo.companion` registered; SDK config saved locally and ignored by Git. Default Firestore database created in us-central1 with deletion protection. Tested private rules successfully deployed.
+- Authentication still returns CONFIGURATION_NOT_FOUND after the owner reported setup; email/password activation is not independently verified. Billing reports false. No Cloud Functions deployment, App Check registration, FCM delivery or two-phone messaging is claimed. `PEOPLE_RELAY_ENABLED` defaults to false and requires `-PmiloPeopleEnabled=true` after server activation.
+- People activation screen visually inspected; Talk design and pet artwork retained. Web appearance controls and dark settings dialog visually checked in local preview. The Android download route is packaged from HTML source.
+- The APK remains a debug-signed private prototype. Real-phone voice, supported-phone local inference, cloud AI and configured account/push flows still need end-to-end testing. No paid anonymous communication, live tracking, iPhone messaging client or public-scale validation is implemented.

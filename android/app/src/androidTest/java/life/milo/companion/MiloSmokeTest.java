@@ -7,6 +7,19 @@ import java.util.concurrent.atomic.AtomicReference;
 @SuppressWarnings("deprecation")
 public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity> {
     public MiloSmokeTest(){super(MainActivity.class);}
+    public void testPeopleLocalListAndCloudActivationState() throws Throwable {
+        MainActivity a=getActivity();
+        runTestOnUiThread(()->{
+            a.prefs.edit().putString("people_drafts","[{\"alias\":\"Mom\",\"email\":\"mom@example.com\"}]").commit();
+            a.show("People");assertNotNull(a.peopleScreen);assertTrue(a.peopleScreen.live());
+            assertEquals(1,a.peopleScreen.drafts().length());
+            assertFalse("Personal test build must keep cloud messaging off until activation",PeopleClient.ready(a));
+            PeopleScreen old=a.peopleScreen;a.show("Talk");assertTrue(old.closed);assertNull(a.peopleScreen);
+            a.prefs.edit().remove("people_drafts").commit();
+        });
+        android.content.pm.PackageInfo info=a.getPackageManager().getPackageInfo(a.getPackageName(),android.content.pm.PackageManager.GET_PERMISSIONS);
+        if(info.requestedPermissions!=null)for(String permission:info.requestedPermissions){assertFalse("People must not request location",permission.equals("android.permission.ACCESS_FINE_LOCATION")||permission.equals("android.permission.ACCESS_COARSE_LOCATION")||permission.equals("android.permission.ACCESS_BACKGROUND_LOCATION"));}
+    }
     public void testFloatingPetStartsUpdatesAndStopsWithOff() throws Throwable {
         MainActivity a=getActivity();
         assertTrue("Test emulator must grant overlay permission",android.provider.Settings.canDrawOverlays(a));

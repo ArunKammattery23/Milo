@@ -1,0 +1,12 @@
+{
+  "name": "milo-cloud-tools",
+  "private": true,
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-milo-people \"npm --prefix functions test\""
+  },
+  "devDependencies": {
+    "firebase-tools": "15.33.0",
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.0.0"
+  }
+}

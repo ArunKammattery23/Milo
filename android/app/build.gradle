@@ -1,13 +1,22 @@
 plugins { id 'com.android.application' }
+if (file('google-services.json').exists()) { apply plugin: 'com.google.gms.google-services' }
 if (providers.gradleProperty('miloBuildDir').isPresent()) { layout.buildDirectory.set(file(providers.gradleProperty('miloBuildDir').get() + '/app')) }
 android {
     namespace 'life.milo.companion'
     compileSdk 36
-    defaultConfig { applicationId 'life.milo.companion'; minSdk 26; targetSdk 36; versionCode 6; versionName '1.5'; testInstrumentationRunner 'android.test.InstrumentationTestRunner' }
+    defaultConfig { applicationId 'life.milo.companion'; minSdk 26; targetSdk 36; versionCode 7; versionName '1.6'; buildConfigField 'boolean', 'PEOPLE_RELAY_ENABLED', providers.gradleProperty('miloPeopleEnabled').getOrElse('false') == 'true' ? 'true' : 'false'; testInstrumentationRunner 'android.test.InstrumentationTestRunner' }
+    buildFeatures { buildConfig true }
     useLibrary 'android.test.runner'
     useLibrary 'android.test.base'
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 dependencies {
     implementation 'com.google.mlkit:genai-prompt:1.0.0-beta4'
+    implementation platform('com.google.firebase:firebase-bom:34.16.0')
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-functions'
+    implementation 'com.google.firebase:firebase-messaging'
+    implementation 'com.google.firebase:firebase-appcheck-playintegrity'
+    debugImplementation 'com.google.firebase:firebase-appcheck-debug'
 }

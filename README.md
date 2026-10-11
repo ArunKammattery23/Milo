@@ -1,9 +1,10 @@
 # Milo
 
-Android companion for conversation, learning, goals and everyday wellbeing. Existing Milo artwork is retained. Version 1.5 adds System / Light / Dark themes and simplifies Talk with Speak and Send, a conversation options menu, and Home / Talk / Goals / More navigation.
+Android companion for conversation, learning, goals and everyday wellbeing. Existing Milo artwork is retained. Version 1.6 adds People: a family/friends list, verified invitations, exact messages, replies and optional private notifications. System / Light / Dark themes and the simplified Talk screen remain.
 
 - `android/`: native app, Gradle wrapper, setup instructions and device smoke tests.
 - `web/`: companion web UI and Android download guide.
+- `cloud/`: Firebase People backend, privacy rules, local security tests and [owner activation instructions](cloud/README.md). Cross-phone messaging is inactive until the owner finishes server activation and rebuilds with the People flag enabled.
 - Read `android/README.md` for setup and `android/VERIFICATION.md` for tested behavior and limitations.
 
 Build from `android/` with Java 17 and Android SDK 36: `./gradlew assembleDebug lintDebug`. Configure your own SDK location in untracked `local.properties`. Local AI is the default on supported Gemini Nano phones; cloud providers are optional and may charge. No provider keys or release signing material are included.
