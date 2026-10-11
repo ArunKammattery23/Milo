@@ -1,0 +1,5 @@
+<resources>
+    <style name="MiloThemeSystem" parent="@android:style/Theme.Material.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:colorAccent">#276A52</item><item name="android:windowLightStatusBar">true</item><item name="android:windowActionModeOverlay">true</item></style>
+    <style name="MiloThemeLight" parent="@android:style/Theme.Material.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:colorAccent">#276A52</item><item name="android:windowLightStatusBar">true</item><item name="android:windowActionModeOverlay">true</item></style>
+    <style name="MiloThemeDark" parent="@android:style/Theme.Material.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:colorAccent">#A2D7B9</item><item name="android:windowLightStatusBar">false</item><item name="android:windowActionModeOverlay">true</item></style>
+</resources>

@@ -1,0 +1,1 @@
+<resources><style name="MiloThemeSystem" parent="@android:style/Theme.Material.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:colorAccent">#A2D7B9</item><item name="android:windowLightStatusBar">false</item><item name="android:windowActionModeOverlay">true</item></style></resources>

@@ -1,4 +1,4 @@
-# Milo Android personal prototype 1.4
+# Milo Android personal prototype 1.5
 
 Local AI is the default; cloud APIs are optional. Android 8 or newer can install the app, but local Gemini Nano requires a phone supported by Android AICore and the ML Kit Prompt API. It has no per-request API fee after the model download. This is not a promise of compatibility with every phone, unlimited inference, zero battery/storage use, or free downloads/data.
 
@@ -43,6 +43,10 @@ See VERIFICATION.md for exactly what passed and what still needs real-phone/cred
 
 Official references: https://developers.google.com/ml-kit/genai/prompt/android/get-started ; https://ai.google.dev/gemini-api/docs/api-key ; https://developers.openai.com/api/docs/models/gpt-4.1-mini ; https://platform.claude.com/docs/en/build-with-claude/streaming .
 
+
+## Appearance
+
+Open Setup → Appearance to choose System, Light or Dark. System follows your Android appearance setting. Milo remembers your choice on this phone and applies it to native screens and the built-in Home view. The web companion offers the same options in Settings and remembers the choice in this browser.
 
 ## Simple conversation layout
 

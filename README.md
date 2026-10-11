@@ -1,6 +1,6 @@
 # Milo
 
-Android companion for conversation, learning, goals and everyday wellbeing. Existing Milo artwork is retained. Version 1.4 simplifies Talk with Speak and Send, a conversation options menu, and Home / Talk / Goals / More navigation.
+Android companion for conversation, learning, goals and everyday wellbeing. Existing Milo artwork is retained. Version 1.5 adds System / Light / Dark themes and simplifies Talk with Speak and Send, a conversation options menu, and Home / Talk / Goals / More navigation.
 
 - `android/`: native app, Gradle wrapper, setup instructions and device smoke tests.
 - `web/`: companion web UI and Android download guide.

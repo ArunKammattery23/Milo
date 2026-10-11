@@ -4,7 +4,7 @@
 - assembleDebug, lintDebug and assembleDebugAndroidTest passed. Lint warnings for legacy API usage, localization and style remain.
 - Android API-35 emulator: **10 tests passed together** with an explicitly selected test class. Checks cover encrypted key setup/save/disconnect for Gemini, OpenAI and Claude, consent gating, invalid key headers, cloud SSE completion and incomplete-stream rejection, Gemini stream/source assembly, local default without automatic cloud fallback, disabled local web search, actual SDK readiness callback, expressions, Off preventing speech/sends, offline screens, renaming Talk layout, floating window creation, continued visibility with the activity in the background, expression persistence and removal when Off is set.
 - The legacy InstrumentationTestRunner's dependency-wide discovery timed out at process startup after the SDK addition. Selecting the app test class avoids that timeout: adb shell am instrument -w -e class life.milo.companion.MiloSmokeTest life.milo.companion.test/android.test.InstrumentationTestRunner.
-- Final APK signature verified with apksigner. SHA-256: DD43C6A14987C3B9409FBF8B074008B3CC4BBCA59CA75AFC29E501B57EC62818.
+- Final APK signature verified with apksigner. SHA-256: 84BE2725F3A0DFE115C367F5EA8E8CC4FCF68D31329A7CDBF6A6A99667AEE236.
 - No real provider key was used. Fake test keys were used only for local encryption and removed. Cloud generation, account billing/quota/region access and real web research are not end-to-end verified.
 - The emulator does not establish real-phone Gemini Nano support or inference quality. The actual SDK status path is tested; generation and model download still need a supported physical phone.
 - Real microphone recognition, audible TTS, background voice, gallery selection, reminder delivery and external calendar/email/Clock handlers still need physical-phone verification. Test speaker, Android voice settings and Test saved connection now expose useful diagnostics without requiring private data.
@@ -14,3 +14,5 @@
 
 
 - Simplified Talk layout built and lint checked; all 10 existing emulator tests passed after redesign. Updated Talk screenshot visually inspected. Milo artwork is unchanged. No live AI or audible voice verification was added in this design update.
+
+- Milo 1.5 adds persistent System, Light and Dark appearance selection for native screens and the built-in Home view; the web companion also has appearance preferences. `assembleDebug` and `lintDebug` passed. No emulator tests were run for this theme change.
