@@ -1,0 +1,13 @@
+plugins { id 'com.android.application' }
+if (providers.gradleProperty('miloBuildDir').isPresent()) { layout.buildDirectory.set(file(providers.gradleProperty('miloBuildDir').get() + '/app')) }
+android {
+    namespace 'life.milo.companion'
+    compileSdk 36
+    defaultConfig { applicationId 'life.milo.companion'; minSdk 26; targetSdk 36; versionCode 5; versionName '1.4'; testInstrumentationRunner 'android.test.InstrumentationTestRunner' }
+    useLibrary 'android.test.runner'
+    useLibrary 'android.test.base'
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies {
+    implementation 'com.google.mlkit:genai-prompt:1.0.0-beta4'
+}
