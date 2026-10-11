@@ -9,7 +9,7 @@ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.query
 const petName=(new URLSearchParams(location.search).get('pet')||'Milo').trim().slice(0,24)||'Milo';
 const greetings={gentle:['You can start small. I’m here to cheer you on. 🌱','A little rest is part of growing. 🍃','You deserve care on ordinary days, too. 💚'],playful:['Tiny step, big leaf energy. 🌱','Even a busy leaf needs a little lie-down. 🍃','One small discovery? That’s a win for Team Curious. ✨'],straightforward:['Choose one small step that works for you.','Take a break when you need one.','You can change your plan. Progress can take time.']};let greeting=0;
 const nativeStyle=location.hostname==='appassets.androidplatform.net'?(new URLSearchParams(location.search).get('style')||'').toLowerCase():'';
-const themeChoice=location.hostname==='appassets.androidplatform.net'?(new URLSearchParams(location.search).get('theme')||'system'):(localStorage.getItem('milo-theme')||'system');if(['light','dark'].includes(themeChoice))document.documentElement.dataset.theme=themeChoice;
+let themeChoice='system';try{themeChoice=location.hostname==='appassets.androidplatform.net'?(new URLSearchParams(location.search).get('theme')||'system'):(localStorage.getItem('milo-theme')||'system');}catch{}if(['light','dark'].includes(themeChoice))document.documentElement.dataset.theme=themeChoice;
 if(Object.prototype.hasOwnProperty.call(greetings,nativeStyle))state.personality=nativeStyle;
 if(!Object.prototype.hasOwnProperty.call(greetings,state.personality))state.personality='gentle';
 $('.brand').textContent='✳ '+petName.toLocaleLowerCase();
