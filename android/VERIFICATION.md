@@ -1,5 +1,11 @@
 # Prototype verification — latest: 12 October 2026
 
+## Milo 1.9 — power control and voice access
+
+- Version code 10. `assembleDebug`, `assembleDebugAndroidTest`, and `lintDebug` passed. The focused Android emulator test for saved Milo on/off state passed.
+- The header now confirms before turning Milo off and shows **Turn on** when off. Setup saves the main switch immediately and labels daily reminders as a separate choice. This prevents accidental one-tap shutdown from silently disabling Talk.
+- Version 1.9 debug APK SHA-256: F21CDAD371412AEC12D31B0A7003F6E6E09B58F828B18E87BB30B182177775C2. Physical-phone voice, local Gemma performance, and two-phone messaging still need real-device verification.
+
 ## Milo 1.8 — simpler AI connection
 
 - Version code 9. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed with Java 21 and Android SDK 36. The focused emulator tests for encrypted key storage and automatic Gemini model selection passed (2 tests). A full instrumentation run stopped because the emulator reported an app ANR; it is not counted as passing.

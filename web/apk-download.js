@@ -20,7 +20,7 @@ if (downloadButton) {
       const apk = new Blob(parts, { type: "application/vnd.android.package-archive" });
       const digest = await crypto.subtle.digest("SHA-256", await apk.arrayBuffer());
       const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
-      if (hash !== "EA3ADF336C83BCDFC7924386B33F84B1500BDB6AEF5A14701E9C7BF5EBFD6AF1") throw new Error("Download integrity check failed");
+      if (hash !== "F21CDAD371412AEC12D31B0A7003F6E6E09B58F828B18E87BB30B182177775C2") throw new Error("Download integrity check failed");
       const objectUrl = URL.createObjectURL(apk);
       const link = document.createElement("a");
       link.href = objectUrl;

@@ -7,6 +7,18 @@ import java.util.concurrent.atomic.AtomicReference;
 @SuppressWarnings("deprecation")
 public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity> {
     public MiloSmokeTest(){super(MainActivity.class);}
+    public void testPowerControlSavesAcrossReopen() throws Throwable {
+        MainActivity a=getActivity();runTestOnUiThread(()->{
+            a.setPetEnabled(false);
+            assertEquals("Turn on",a.powerButton.getText().toString());
+            assertFalse(a.getSharedPreferences("milo",0).getBoolean("pet_enabled",true));
+            a.setPetEnabled(true);
+            assertEquals("Turn off",a.powerButton.getText().toString());
+            assertTrue(a.getSharedPreferences("milo",0).getBoolean("pet_enabled",false));
+            a.show("Talk");assertFalse(a.petFace.expression().equals("off"));
+        });
+        assertTrue(a.getSharedPreferences("milo",0).getBoolean("pet_enabled",false));
+    }
     public void testPeopleLocalListAndCloudActivationState() throws Throwable {
         MainActivity a=getActivity();
         runTestOnUiThread(()->{
