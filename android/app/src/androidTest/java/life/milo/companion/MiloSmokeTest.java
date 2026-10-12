@@ -13,7 +13,7 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
             a.prefs.edit().putString("people_drafts","[{\"alias\":\"Mom\",\"email\":\"mom@example.com\"}]").commit();
             a.show("People");assertNotNull(a.peopleScreen);assertTrue(a.peopleScreen.live());
             assertEquals(1,a.peopleScreen.drafts().length());
-            assertFalse("Personal test build must keep cloud messaging off until activation",PeopleClient.ready(a));
+            assertEquals(PeopleClient.configured(a),PeopleClient.ready(a));assertTrue(a.peopleScreen instanceof SparkPeopleScreen);
             PeopleScreen old=a.peopleScreen;a.show("Talk");assertTrue(old.closed);assertNull(a.peopleScreen);
             a.prefs.edit().remove("people_drafts").commit();
         });
@@ -55,7 +55,7 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
                 assertNotNull(key);assertNotNull(consent);assertNotNull(save);assertNotNull(disconnect);
                 key.setText("fixture-not-real-"+pid);save.performClick();assertFalse(KeyVault.hasKeyForProvider(a,pid));consent.setChecked(true);save.performClick();
                 try{assertEquals("fixture-not-real-"+pid,KeyVault.loadForProvider(a,pid));}catch(Exception e){throw new AssertionError(e);}
-                assertFalse(a.prefs.getString("key_data_"+pid,"").contains("fixture-not-real"));disconnect.performClick();assertFalse(KeyVault.hasKeyForProvider(a,pid));
+                assertEquals("",key.getText().toString());save.performClick();try{assertEquals("fixture-not-real-"+pid,KeyVault.loadForProvider(a,pid));}catch(Exception e){throw new AssertionError(e);}assertFalse(a.prefs.getString("key_data_"+pid,"").contains("fixture-not-real"));disconnect.performClick();assertFalse(KeyVault.hasKeyForProvider(a,pid));
             }
         });
     }
@@ -69,6 +69,21 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
         assertEquals("Hello",ClaudeClient.parseClaudeSse(new java.io.BufferedReader(new java.io.StringReader(claude+finish)),s->{}).text);
         try{ClaudeClient.parseClaudeSse(new java.io.BufferedReader(new java.io.StringReader(claude)),s->{});fail("Incomplete Claude stream accepted");}catch(java.io.IOException expected){}
         try{AiProvider.validateKey("bad\nkey",true);fail("Header injection accepted");}catch(MainActivity.ApiFailure expected){}
+    }
+    public void testGeminiAutoModelSelectionAndOldModelMigration() throws Throwable {
+        org.json.JSONArray available=new org.json.JSONArray()
+            .put(new org.json.JSONObject().put("name","models/gemini-2.5-flash").put("supportedGenerationMethods",new org.json.JSONArray().put("generateContent")))
+            .put(new org.json.JSONObject().put("name","models/gemini-3.5-flash-lite").put("supportedGenerationMethods",new org.json.JSONArray().put("generateContent")))
+            .put(new org.json.JSONObject().put("name","models/gemini-3.8-flash").put("supportedGenerationMethods",new org.json.JSONArray().put("generateContent")))
+            .put(new org.json.JSONObject().put("name","models/gemini-3.1-flash-lite").put("supportedGenerationMethods",new org.json.JSONArray().put("embedContent")));
+        assertEquals("gemini-3.5-flash-lite",GeminiModels.choose(available,false));
+        assertEquals("gemini-3.8-flash",GeminiModels.choose(available,true));
+        assertEquals("",GeminiModels.choose(new org.json.JSONArray().put(new org.json.JSONObject().put("name","models/gemini-3.5-flash-lite").put("supportedGenerationMethods",new org.json.JSONArray().put("embedContent"))),false));
+        MainActivity a=getActivity();runTestOnUiThread(()->{
+            a.prefs.edit().putString("ai_provider",AiProvider.GEMINI).putString("model_gemini","gemini-2.5-flash").commit();
+            assertEquals("auto",((GeminiProvider)AiProvider.current(a)).model);
+            assertEquals("auto",a.prefs.getString("model_gemini",""));
+        });
     }
     public void testLocalDefaultAndModelStatusWithoutCloudFallback() throws Throwable {
         MainActivity a=getActivity();runTestOnUiThread(()->{

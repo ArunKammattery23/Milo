@@ -60,14 +60,7 @@ final class ClaudeClient extends AiProvider {
             }
 
             int code = conn.getResponseCode();
-            if (code != 200) {
-                if (code == 429) throw new MainActivity.ApiFailure(
-                        "Claude rate limit reached. Wait a moment and try again.");
-                if (code == 401) throw new MainActivity.ApiFailure(
-                        "Claude rejected your key. Check it in Setup.");
-                throw new MainActivity.ApiFailure(
-                        "Claude returned an error (" + code + "). Try again later.");
-            }
+            if (code != 200) throw new MainActivity.ApiFailure(ProviderErrors.message("Claude",code,conn.getErrorStream()));
 
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {

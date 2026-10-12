@@ -1,78 +1,52 @@
-# Milo People: owner setup
+# Milo People — free Spark version (1.7)
 
-Milo 1.6 adds a private family/friends list, email-bound invitations, exact messages, replies, read receipts, blocking, deletion and optional Android notifications. “Where is my son?” sends **“Where are you? Please reply when you can.”** The son chooses what to say. Milo does not request GPS permission or track people. Senders review messages before sending; received messages are read aloud only when the recipient taps **Read aloud**.
+Milo 1.7 uses Firebase Authentication and direct Cloud Firestore client transactions. Cloud Functions and AI provider keys are **not required**. Keep the project on Spark. Free storage/read/write/authentication quotas still apply; this is not an unlimited service.
 
-The personal APK is connected to the owner project **milo-aea0c**, but **cross-phone messaging remains inactive** until its backend and App Check are activated. It can save names locally now. Android registration and private Firestore rules are set up. Authentication initialization is not yet verified, and the project is still on the non-billing Spark plan. The owner must finish these steps, deploy the service and rebuild with the messaging flag enabled. Customers do not need an AI API key for messaging. This first version uses verified **email/password** accounts; Google sign-in and anonymous paid communication are not implemented.
+## Current owner configuration
 
-## 1. Create the owner project
+Project: `milo-aea0c`. Android package: `life.milo.companion`. The configured personal APK includes the ignored owner SDK configuration, and the tested Spark rules are deployed. **Authentication still returns CONFIGURATION_NOT_FOUND**, including through the same sign-in endpoint used by the Android SDK. This is a service setup blocker, not an AI key problem.
 
-1. Create a project in the [Firebase console](https://console.firebase.google.com/). Disable Analytics if you do not need it; this app does not include the Analytics SDK.
-2. Add an Android app with package name **life.milo.companion**. Download `google-services.json` to `android/app/google-services.json`. It is intentionally ignored by Git. Never put service-account credentials or AI provider secrets in the APK or repository.
-3. Enable Authentication → Email/Password. Configure password policy, email verification and password recovery templates. Review authentication quotas and abuse protection before inviting users.
-4. Create a Cloud Firestore database in production mode. Choose its region deliberately. This implementation's functions run in `us-central1`; changing region requires updating `functions/index.js` and `PeopleClient.java` together.
-5. Cloud Functions requires a billing-enabled **Blaze** project. Set budget alerts and monitor usage. Alerts are not hard spending caps. FCM itself has no charge, but Firestore, functions, storage, email delivery limits and operational costs mean this is not an unlimited free service. See [Firebase pricing](https://firebase.google.com/pricing).
+Open [Authentication → Sign-in method](https://console.firebase.google.com/project/milo-aea0c/authentication/providers), click **Get started** if present, then enable Email/Password and Save. The Android app-settings page does not enable sign-in. Once authentication is initialized, this build needs no messaging server activation flag. Google sign-in is not implemented.
 
-## 2. Activate app verification
+## Use on two phones
 
-Register the Android app with [App Check / Play Integrity](https://firebase.google.com/docs/app-check/android/play-integrity-provider). Add the SHA-256 fingerprint of your release signing certificate (including Play App Signing when using Google Play). Configure attestation requirements for your distribution channel. Release builds use Play Integrity; callable functions require App Check and verified-email authentication.
+1. Install the same configured APK. Open **More → People**, create an email/password account, open its verification email and tap **I have verified · refresh**.
+2. Save your People name. The other person does the same.
+3. Add a saved name/relationship, or tap **Invite family or a friend**. Enter the other person's exact verified account email and your label, such as Son.
+4. Share the 32-character invitation code yourself. It expires after approximately 23 hours. The recipient chooses **Accept an invitation**, supplies the code and their own relationship label, such as Mom, and explicitly accepts.
+5. Open the connection. Choose **Ask where they are**, **Ask them to come home**, or **Write or speak a message**. Review the actual text and confirm Send.
+6. The recipient opens the conversation, taps a message, and chooses **Read aloud** or **Reply**. Replies go back through the same private conversation.
 
-Debug builds use the Firebase debug provider. For a private configured debug build, obtain its debug token locally from Android logcat and register it in App Check → Manage debug tokens. Treat that token as a secret; do not commit it, paste it into chat, or publish a debug-token-enabled build to customers. The APK currently offered on the private Site keeps messaging inactive and does not need a registered debug token until cloud testing is enabled.
+Milo relays the exact reviewed text. It never invents a person's whereabouts or collects GPS. Speech dictation uses Android's speech service and may be online. General AI chat does not autonomously choose contacts or send messages. This is a conversation relay, not automatic conflict resolution.
 
-Enable App Check enforcement for Firestore after checking valid-device metrics. Do not relax the deny-by-default Firestore rules to fix a setup error. Test token refresh and verification on real phones before production enforcement.
+## Free-version boundaries
 
-## 3. Install and deploy the backend
+- Updates run only while the People view is visible. No background push, automatic playback, wake word or guaranteed immediate delivery.
+- The newest 50 conversations and 50 messages in an opened conversation are shown. No older-message pagination in this prototype.
+- A server-enforced per-account rolling allowance permits 120 combined message/invitation creations per 24 hours. Firebase project quotas may be reached sooner. Reads and account creation are subject to Firebase quotas, not a complete public-abuse prevention system.
+- Invites are email-bound, single-use and expire for acceptance. They are not automatically deleted. Messages remain until their sender deletes them; no paid TTL cleanup is configured.
+- **Hide for me** changes only the current user's view; it is not cloud deletion. **Delete for both people** removes a message authored by the caller. Previously read/copied text cannot be recalled.
+- Blocking stops messages in both directions across old conversations. Unblocking still requires a new invitation/conversation. Closing a conversation cannot be reversed.
+- **Delete my People account** requires recent sign-in and first disables/redacts the private profile, then deletes the Firebase login. Existing conversation identity snapshots and messages remain for the other participant; delete sent messages before deleting the account if desired. A minimal disabled profile prevents stale credentials from recreating the profile. Local drafts are erased separately in Setup. A failed login-deletion step can be retried.
+- Messages are encrypted in transit and access-controlled but **not end-to-end encrypted**. Authorized project operators can access stored data.
+- Paid anonymous communication is deferred. Native iPhone messaging and Google sign-in are not included.
 
-Use Node.js **22**, Java **21** for local Firebase emulators, and the Firebase CLI installed below. From the repository:
+## Owner build and deployment
 
-```sh
-cd cloud
-npm ci
-npm --prefix functions ci
-npx firebase login
-npx firebase deploy --only functions,firestore:rules --project YOUR_PROJECT_ID
-```
-
-The owner identified project **milo-aea0c**, saved as the CLI default in `.firebaserc`. Replace `YOUR_PROJECT_ID` with `milo-aea0c` after confirming access to that project. Deployment creates billable resources; these instructions do not deploy anything automatically. Follow the CLI's prompts for required APIs, IAM and artifact cleanup. Functions use Application Default Credentials on the server, never a service-account file in the Android app.
-
-In Firestore → Time-to-live, enable the `expiresAt` field for collection groups **messages**, **invites**, and **limits**. Message retention is 30 days, invitations 24 hours and rate-limit documents 3 days. TTL removal is asynchronous and can incur delete charges. The app hides expired messages; TTL physically removes stored copies later. Until TTL deletes them, authorized server operators and the owning account can still access expired copies. Tombstones in `deletedUsers` retain only the removed account UID and timestamp to prevent stale tokens from recreating a deleted account. Do not enable TTL on tombstones while old authentication tokens could still be accepted.
-
-## 4. Build and try on two phones
-
-With Java 17 and Android SDK 36:
+Use Java **21**, Android SDK 36, Gradle 8.14 and the repo's AGP version. Configure the SDK path outside Git. Place the owner-downloaded `google-services.json` in `android/app/`; it is ignored. Never put service-account files or personal AI keys in the APK.
 
 ```sh
 cd android
-./gradlew -PmiloPeopleEnabled=true assembleDebug lintDebug
-```
-
-For release distribution, configure owner signing outside Git and build the release bundle. The debug prototype is not a Play Store artifact. The Google Services Gradle plugin is applied only when `app/google-services.json` exists, so the default checkout still builds without owner configuration. `-PmiloPeopleEnabled=true` activates the client only after you have deployed and verified the server. Without that flag, People shows an owner activation notice even if the SDK configuration is present.
-
-On each phone:
-
-1. Open **More → People**, create an account, open its verification email, then tap **I have verified · refresh**.
-2. Save your People name. This name and verified email identify your messages to connected people; a relationship label is not proof of a real family relationship.
-3. Mom taps **Invite family or a friend**, enters the son's verified email and label “Son”, creates a code and shares it herself. Milo does not send this code automatically.
-4. Son taps **Accept an invitation**, enters the code and label “Mom”, and accepts the stated sharing permissions. The code is email-bound and single-use.
-5. Mom opens Son → **Ask where they are** or **Ask them to come home**, reviews the exact message and sends it. Son opens his inbox and replies. No location is collected automatically.
-6. Each person may enable notifications independently. Notifications contain no sender or message body; opening Milo loads the inbox. Offline delivery can be delayed. **Off** suppresses Milo notifications and speech; it does not revoke an accepted connection. Disable notifications or block/remove someone in People when desired.
-
-Test verified/unverified accounts, rejected/expired invitations, retries after lost connectivity, two-way replies, receipt synchronization, blocked connections, logout/account switching, notification denial, Off, token refresh, reinstall, real voice and account deletion. Push/voice delivery and configured Android authentication still need real-device end-to-end verification; emulator backend tests alone do not establish these.
-
-## Privacy and boundaries
-
-- Cloud data: account UID, verified email, chosen name/labels, connections, exact message text, timestamps/read receipts, rate counters and opt-in device tokens. Saved local names stay on the phone until you invite someone. Mood, AI history, gallery, goals and location are not sent to this messaging backend.
-- Client writes are denied. Server functions derive identity from authenticated claims; invitations are bound to verified email and mutual acceptance. Blocks stop new messages. Maximum 50 active connections, 10 invitations/day, 20 accepts/day, 100 sends/day, 2,000 characters/message and 5 devices/account. These limits and App Check mitigate abuse; they are not a complete public-service moderation system.
-- Message transport does not call any AI model. Dictation may use your phone's remote speech service. Messages are not end-to-end encrypted; the project's authorized server operators can access stored content. Firebase handles transport encryption and storage controls.
-- **Delete my copy** removes only that user's copy. **Delete my People account** requires recent sign-in and removes their profile, tokens, private message copies and connections. Another person's message copies remain until they delete them or TTL removes them. Erasing local Milo data signs out; it does not delete server copies. If a deletion is interrupted, retry or have the owner complete cleanup before treating it as finished.
-- No paid anonymous feature, live location, emergency dispatch, autonomous message sending or automatic background reading is included. The native Android app is the messaging client; the web companion and iPhone do not yet have this flow.
-
-## Local verification
-
-```sh
-cd cloud
+./gradlew assembleDebug assembleDebugAndroidTest lintDebug
+cd ../cloud
+npm ci
+npm --prefix functions ci
 npm test
+npx firebase deploy --only firestore:rules --project milo-aea0c
 ```
 
-Tests use the **demo-milo-people** Firestore emulator, never production. They exercise invitations, identity/App Check guards, exact sender attribution, transaction retries/idempotence, read receipts, blocks, quotas, device ownership, account deletion and Firestore access rules. They do not send FCM pushes, verification emails or real messages. See [Android verification](../android/VERIFICATION.md) for recorded results.
+Tests use demo-milo-people emulators, never production records. Deployment above changes only Firestore rules; it does not enable billing or deploy functions. Release signing and production distribution still need separate work. App Check providers exist in the app, but production Firestore App Check enforcement must be configured and tested by the owner before public launch. Do not distribute debug attestation tokens.
 
-Primary references: [Android setup](https://firebase.google.com/docs/android/setup), [callable functions](https://firebase.google.com/docs/functions/callable), [FCM receiving](https://firebase.google.com/docs/cloud-messaging/android/receive-messages), [email/password authentication](https://firebase.google.com/docs/auth/android/password-auth), [App Check](https://firebase.google.com/docs/app-check/android/play-integrity-provider), [TTL](https://firebase.google.com/docs/firestore/ttl).
+The old v1.6 callable-functions implementation remains in `functions/` for possible future migration. Its Android push delivery is disabled by `PEOPLE_RELAY_ENABLED=false`. Do not deploy it for this Spark version.
+
+Primary references: [Firestore realtime listeners](https://firebase.google.com/docs/firestore/query-data/listen), [atomic writes and access-rule validation](https://firebase.google.com/docs/firestore/manage-data/transactions), [Firebase pricing plans](https://firebase.google.com/docs/projects/billing/firebase-pricing-plans), [email/password authentication](https://firebase.google.com/docs/auth/android/password-auth).

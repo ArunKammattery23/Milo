@@ -10,7 +10,7 @@ import java.util.*;
 final class PeopleClient {
     static FirebaseFirestore store;
     static boolean configured(Context c){return !FirebaseApp.getApps(c).isEmpty();}
-    static boolean ready(Context c){return configured(c)&&BuildConfig.PEOPLE_RELAY_ENABLED;}
+    static boolean ready(Context c){return configured(c);}
     static FirebaseUser current(){return FirebaseAuth.getInstance().getCurrentUser();}
     static synchronized FirebaseFirestore db(){if(store==null){store=FirebaseFirestore.getInstance();store.setFirestoreSettings(new FirebaseFirestoreSettings.Builder().setLocalCacheSettings(MemoryCacheSettings.newBuilder().build()).build());}return store;}
     static Task<HttpsCallableResult> call(String name,Map<String,Object> data){return FirebaseFunctions.getInstance("us-central1").getHttpsCallable(name).call(data);}

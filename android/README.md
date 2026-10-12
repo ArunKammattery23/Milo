@@ -1,17 +1,17 @@
-# Milo Android personal prototype 1.6
+# Milo Android personal prototype 1.8
 
-Local AI is the default; cloud APIs are optional. Android 8 or newer can install the app, but local Gemini Nano requires a phone supported by Android AICore and the ML Kit Prompt API. It has no per-request API fee after the model download. This is not a promise of compatibility with every phone, unlimited inference, zero battery/storage use, or free downloads/data.
+Local AI is the default; cloud APIs are optional. Android 8 or newer can install the app. On-device AI offers an imported Gemma 3 1B `.task` model through MediaPipe, or Gemini Nano when Android AICore supports the phone. Local inference has no per-request API fee after the model download, but model availability, storage, battery use and performance vary by phone. The imported model needs substantial free storage and can take time to respond.
 
 ## Start on your phone
 
 1. Install Milo-Android-Test.apk. This is a debug-signed personal prototype.
-2. Choose On-device AI, open Setup and check your phone. Download the local model if it is available. Once ready, use Talk. No API key is needed for local text generation.
-3. If local AI is unavailable, offline Comfort, Goals, Memories and prepared lessons still work. Cloud AI is optional: choose Gemini, OpenAI API, Claude or a compatible HTTPS API, get a developer key from that provider, enter an accessible model ID, review the data/price notes and Save connection.
+2. Choose On-device AI, open Setup and import the supported Gemma 3 1B `.task` file with Android's file picker, or check whether Gemini Nano is available. The Setup screen links to the official model source and explains its license. Once ready, use Talk. No API key is needed for local text generation.
+3. If local AI is unavailable, offline Comfort, Goals, Memories and prepared lessons still work. Cloud AI is optional: choose Gemini, OpenAI API, Claude or a compatible HTTPS API, get a developer key from that provider, review the data/price notes and Save connection. Gemini uses automatic model selection by default; manual model choice is under Advanced.
 4. Test saved connection sends only a short hello with no private mood/goal/history context. It can use quota or incur provider charges. A saved encrypted key alone does not prove live access.
 5. For sound, enable Milo, choose a supported spoken language, use Setup → Test speaker and raise media volume. Android voice settings can install/select a speech engine and voice. Failed playback is shown explicitly.
 6. Speak opens phone speech recognition. Review the transcript before Send, or explicitly enable Direct voice. Speech recognition/TTS may use remote phone services even when AI text generation is local.
 
-The initial local mode never silently substitutes canned replies or switches to a cloud provider. Local inference is limited to short tasks in the foreground; it has no web research or background AI. AICore has per-app quotas and its model availability varies by phone/configuration.
+The local mode never silently switches to a cloud provider. Local inference is limited to short tasks in the foreground; it has no web research or background AI. AICore has per-app quotas and its model availability varies by phone/configuration. Importing Gemma on a real phone and its response speed still need device testing.
 
 Cloud chat streams text. Google Search is available only for Gemini in this prototype. OpenAI and Claude model IDs are editable for account availability and deeper learning. Other Chat Completions services can use the Custom API option over HTTPS. Choosing a more capable model may cost more. No automatic provider/model upgrade occurs. ChatGPT/Claude app subscriptions do not grant this app API access.
 
@@ -29,7 +29,7 @@ Memories accepts only selected photos; resized private copies stay local and are
 
 ## Privacy and limits
 
-No developer AI key or central database is included. Provider keys are encrypted separately using Android Keystore. Selected photos, mood, interests, goals and settings use private phone storage; chats stay in memory. Backup is disabled. Setup can disconnect providers and erase local data. Device compromise can still expose data; local erasure does not erase provider-retained data.
+No developer AI key is included. Provider keys are encrypted separately using Android Keystore. Saving an unchanged connection with a blank key field retains the already saved key. Selected photos, mood, interests, goals and settings use private phone storage; chats stay in memory. Backup is disabled. Firebase stores only opted-in People accounts, invitations and messages, subject to its rules. Setup can disconnect providers and erase local data. Device compromise can still expose data; local erasure does not erase provider-retained data.
 
 Cloud Send includes the prompt, recent chat, selected mood/goals/preferences to the chosen provider over HTTPS. Google unpaid-service terms may allow submitted data to improve products. Custom API keys and prompts go to the HTTPS server the user chooses. Keep confidential details out. Local text generation stays on the phone; model downloads/status checks and speech services have separate connectivity needs.
 
@@ -37,7 +37,7 @@ There is a 30-attempt daily cloud limit per installation, not a billing guarante
 
 ## Build and verification
 
-Java 17, Gradle 8.14, Android SDK 36, AGP 8.13.2 and ML Kit genai-prompt 1.0.0-beta4. Build: assembleDebug lintDebug assembleDebugAndroidTest. On this OneDrive checkout, use -PmiloBuildDir pointing to the writable external build directory to avoid file locks.
+Java 21, Gradle 8.14, Android SDK 36, AGP 8.13.2, ML Kit genai-prompt 1.0.0-beta4 and MediaPipe tasks-genai 0.10.27. Build: assembleDebug lintDebug assembleDebugAndroidTest. Use -PmiloBuildDir pointing to a writable external build directory if the checkout is on OneDrive.
 
 See VERIFICATION.md for exactly what passed and what still needs real-phone/credential testing.
 
@@ -56,4 +56,4 @@ Canonical source repository: https://github.com/ArunKammattery23/Milo.git. Use t
 
 ## People · family and friends
 
-Open More → People to save family/friend names locally. Cross-phone messages require owner activation using [cloud/README.md](../cloud/README.md); this personal APK does not deliver them yet; the owner Firebase project is registered but its server is not activated. Once activated, both people sign in with verified email/password accounts and accept an invitation. Review exact messages before sending, reply, or tap Read aloud. Ask where they are requests their reply; no GPS permission is used. Notifications are opt-in and omit message text. AI keys are unrelated to messaging. Paid anonymous messaging and Google account sign-in are not included.
+Open More → People for family/friend messages. Firestore rules are deployed on the free Spark plan. Both people need verified email/password accounts and must accept an invitation. Review exact messages before sending, reply, or tap Read aloud. Ask where they are requests their reply; no GPS permission is used. Messages update while People is open, without background push or automatic speech. Firebase Authentication still needs to be activated in the owner project before cross-phone sign-in can work; see [cloud/README.md](../cloud/README.md). AI keys are unrelated to messaging. Paid anonymous messaging and Google account sign-in are not included.

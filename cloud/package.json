@@ -2,7 +2,7 @@
   "name": "milo-cloud-tools",
   "private": true,
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project demo-milo-people \"npm --prefix functions test\""
+    "test": "firebase emulators:exec --only firestore --project demo-milo-people \"node --test spark.test.js && npm --prefix functions test\""
   },
   "devDependencies": {
     "firebase-tools": "15.33.0",

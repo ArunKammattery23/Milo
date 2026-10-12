@@ -1,4 +1,24 @@
-# Prototype verification — 11 October 2026
+# Prototype verification — latest: 12 October 2026
+
+## Milo 1.8 — simpler AI connection
+
+- Version code 9. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed with Java 21 and Android SDK 36. The focused emulator tests for encrypted key storage and automatic Gemini model selection passed (2 tests). A full instrumentation run stopped because the emulator reported an app ANR; it is not counted as passing.
+- Setup now offers **Free on-phone AI** and **Connect cloud AI**. Gemini selects a compatible chat model from Google's model list; advanced model choice remains available. Connect saves the encrypted key and sends a small test request in one action.
+- A user-authorized temporary Gemini key was tested through the v1.7 emulator's in-app test button with a supported model. The response succeeded and the key was removed from the emulator. This confirms the provider path, not the new 1.8 interface on a physical phone.
+- Version 1.8 debug APK SHA-256: EA3ADF336C83BCDFC7924386B33F84B1500BDB6AEF5A14701E9C7BF5EBFD6AF1. Google account billing, local Gemma speed and two-phone messaging still need real-device checks.
+
+## Milo 1.7 — Spark People, API setup and local Gemma
+
+- Java 21 build: assembleDebug, assembleDebugAndroidTest and lintDebug passed. MediaPipe tasks-genai 0.10.27 requires Java 21 to compile; Java 17 is insufficient. Existing lint warnings remain; no lint errors.
+- **11 Android API-35 emulator tests passed**. Provider setup tests now additionally verify that an empty key field after saving still retains the encrypted key and that saving again with a blank field preserves it. Tests use fixture keys only; no real provider credentials were read or sent.
+- **7 Spark rules tests passed**: verified/private identities, email-bound atomic invitation acceptance, exact two-way messages, recipient-only read receipts, outsider/forgery/oversize/quota rejection, blocking across conversations, reconnection after unblock, hiding/deletion ownership, expiry and disabled-profile enforcement. **8 legacy backend tests also passed**.
+- Spark rules deployed successfully to milo-aea0c. No billing upgrade or Cloud Functions deployment. Authentication still returns CONFIGURATION_NOT_FOUND; live signup, verification email and two-phone messaging are not verified.
+- Version 1.7 / version code 8. APK SHA-256: A2C38C932D5E4994BE1C0760B7AFAA5374249EE5B8544C2EB6A577EB52C7EFB7.
+- Added actual local Gemma inference through MediaPipe and Android file-picker import, separate from system Nano. Publisher model download/terms are handled by the user. No model weights are bundled. Native inference, import of the full model and performance on the owner's S23 remain unverified; the emulator is not proof of support. MediaPipe's API is in maintenance mode; this Java-compatible prototype uses its documented 0.10.27 API, with a future LiteRT-LM migration left open.
+- API error classifications distinguish invalid key, access restrictions, model availability, quota/credits and service failures without showing raw provider responses. Test requests retain saved keys and use a captured provider/key. Live provider access remains unverified without a user-owned valid key.
+- People requires the conversation open. It does not automatically parse/send a general AI-chat request, speak in the background, or track location. See cloud/README.md for retention and account-deletion limits.
+
+## Earlier verification
 
 - Final personal Android APK: version 1.5 (version code 6), SDK 36, Java 17, Gradle 8.14, AGP 8.13.2, ML Kit Prompt API 1.0.0-beta4.
 - assembleDebug, lintDebug and assembleDebugAndroidTest passed. Lint warnings for legacy API usage, localization and style remain.

@@ -13,7 +13,7 @@ import org.json.*;
 import java.util.*;
 
 /** Verified invitations and exact messages; received text is never executed or sent to AI. */
-final class PeopleScreen {
+class PeopleScreen {
     final MainActivity a;
     ListenerRegistration contactsListener,inboxListener;
     LinearLayout contacts,inbox;

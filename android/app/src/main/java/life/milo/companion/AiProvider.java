@@ -83,7 +83,12 @@ abstract class AiProvider {
     static AiProvider current(Context context) {
         SharedPreferences prefs = context.getSharedPreferences("milo", Context.MODE_PRIVATE);
         String id = prefs.getString("ai_provider", LOCAL);
-        if (GEMINI.equals(id)) return new GeminiProvider(prefs.getString("model_gemini",MainActivity.MODEL));
+        if (LOCAL.equals(id) && prefs.getBoolean("portable_local",false)) return new PortableLocalAi(context);
+        if (GEMINI.equals(id)) {
+            String model=prefs.getString("model_gemini","auto");
+            if("gemini-2.5-flash".equals(model)){model="auto";prefs.edit().putString("model_gemini",model).apply();}
+            return new GeminiProvider(model);
+        }
         if (OPENAI.equals(id)) return new OpenAiClient(prefs.getString("model_openai", OpenAiClient.DEFAULT_MODEL));
         if (CLAUDE.equals(id)) return new ClaudeClient(prefs.getString("model_claude", ClaudeClient.DEFAULT_MODEL));
         return forId(id);
@@ -92,7 +97,7 @@ abstract class AiProvider {
     static String defaultModel(String id) {
         if (OPENAI.equals(id)) return OpenAiClient.DEFAULT_MODEL;
         if (CLAUDE.equals(id)) return ClaudeClient.DEFAULT_MODEL;
-        if (GEMINI.equals(id)) return MainActivity.MODEL;
+        if (GEMINI.equals(id)) return "auto";
         return "";
     }
 

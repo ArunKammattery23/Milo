@@ -60,14 +60,7 @@ final class OpenAiClient extends AiProvider {
             }
 
             int code = conn.getResponseCode();
-            if (code != 200) {
-                if (code == 429) throw new MainActivity.ApiFailure(
-                        "OpenAI rate limit reached. Wait a moment and try again.");
-                if (code == 401) throw new MainActivity.ApiFailure(
-                        "OpenAI rejected your key. Check it in Setup.");
-                throw new MainActivity.ApiFailure(
-                        "OpenAI returned an error (" + code + "). Try again later.");
-            }
+            if (code != 200) throw new MainActivity.ApiFailure(ProviderErrors.message("OpenAI",code,conn.getErrorStream()));
 
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {

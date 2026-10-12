@@ -10,8 +10,8 @@ import org.json.*;
  */
 final class GeminiProvider extends AiProvider {
     final String model;
-    GeminiProvider(){this(MainActivity.MODEL);}
-    GeminiProvider(String model){this.model=configuredModel(model,MainActivity.MODEL);}
+    GeminiProvider(){this("auto");}
+    GeminiProvider(String model){this.model=configuredModel(model,"auto");}
 
     @Override String displayName() { return "Google Gemini"; }
     @Override String id() { return GEMINI; }
@@ -23,7 +23,8 @@ final class GeminiProvider extends AiProvider {
             String key, String name, String language, String practice,
             String style, String prompt, List<JSONObject> history,
             String context, boolean useSearch, Consumer<String> partial) throws Exception {
+        String selected="auto".equals(model)?GeminiModels.discover(key,useSearch):model;
         return GeminiClient.request(key, name, language, practice, style,
-                prompt, history, context, useSearch, partial,model);
+                prompt, history, context, useSearch, partial,selected);
     }
 }

@@ -4,13 +4,14 @@ if (providers.gradleProperty('miloBuildDir').isPresent()) { layout.buildDirector
 android {
     namespace 'life.milo.companion'
     compileSdk 36
-    defaultConfig { applicationId 'life.milo.companion'; minSdk 26; targetSdk 36; versionCode 7; versionName '1.6'; buildConfigField 'boolean', 'PEOPLE_RELAY_ENABLED', providers.gradleProperty('miloPeopleEnabled').getOrElse('false') == 'true' ? 'true' : 'false'; testInstrumentationRunner 'android.test.InstrumentationTestRunner' }
+    defaultConfig { applicationId 'life.milo.companion'; minSdk 26; targetSdk 36; versionCode 9; versionName '1.8'; buildConfigField 'boolean', 'PEOPLE_RELAY_ENABLED', 'false'; testInstrumentationRunner 'android.test.InstrumentationTestRunner' }
     buildFeatures { buildConfig true }
     useLibrary 'android.test.runner'
     useLibrary 'android.test.base'
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 dependencies {
+    implementation 'com.google.mediapipe:tasks-genai:0.10.27'
     implementation 'com.google.mlkit:genai-prompt:1.0.0-beta4'
     implementation platform('com.google.firebase:firebase-bom:34.16.0')
     implementation 'com.google.firebase:firebase-auth'
