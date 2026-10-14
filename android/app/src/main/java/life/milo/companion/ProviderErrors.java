@@ -18,7 +18,7 @@ final class ProviderErrors {
         if(status==402||reason.contains("insufficient_quota"))return provider+" has no available API credits. Check your provider account; a chat subscription may not include API credits."+tail;
         if(status==403||reason.contains("API_KEY_SERVICE_BLOCKED")||reason.contains("API_KEY_HTTP_REFERRER_BLOCKED"))return provider+" denied access ("+status+"). Check this key's API/application restrictions, project access and region in the provider console."+tail;
         if(status==404)return provider.equals("Google")?"Google could not use this model (404). In Setup tap Choose Gemini model automatically, then Save connection and Test again."+tail:provider+" could not find the model (404). Enter an available model ID in Setup and save."+tail;
-        if(status==429)return provider+" reports a rate or quota limit (429). Wait or check the account's quota and credits; repeatedly replacing the key will not fix a quota limit."+tail;
+        if(status==429)return provider.equals("Google")?"Google Gemini reached this project's rate or daily quota (429). Your key is saved. Check this project's limits in Google AI Studio, or use on-phone AI in Setup. A new key in the same project will not reset the limit.":provider+" reports a rate or quota limit (429). Wait or check the account's quota and credits; repeatedly replacing the key will not fix a quota limit."+tail;
         if(status==400)return provider+" rejected the model or request settings (400). Check the model ID and whether your account supports it."+tail;
         if(status>=500)return provider+" is temporarily unavailable ("+status+"). Try later."+tail;
         return provider+" returned error "+status+". Check the provider account and connection."+tail;

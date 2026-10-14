@@ -1,4 +1,10 @@
-# Prototype verification — latest: 12 October 2026
+# Prototype verification — latest: 14 October 2026
+
+## Milo 1.10 — Gemini quota guidance
+
+- Version code 11. `assembleDebug`, `assembleDebugAndroidTest`, and `lintDebug` passed. On a Galaxy S23, the quota guidance and Android voice-service tests passed (2 tests). The device accepted a spoken test request; audible sound still depends on phone volume and speaker output.
+- Google 429 now appears as one error with direct buttons for project limits and on-phone AI setup. This does not bypass Google's rate or daily quotas.
+- Version 1.10 debug APK SHA-256: 9AE1EB40906E2C06DBDF9AC57B7B60B81FFB70F6CBF7092F234C127E410BFBCE. The user's Google project still needs available Gemini quota for cloud replies.
 
 ## Milo 1.9 — power control and voice access
 

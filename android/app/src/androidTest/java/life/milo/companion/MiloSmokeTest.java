@@ -7,6 +7,13 @@ import java.util.concurrent.atomic.AtomicReference;
 @SuppressWarnings("deprecation")
 public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity> {
     public MiloSmokeTest(){super(MainActivity.class);}
+    public void testGeminiQuotaGuidanceKeepsSavedKey() {
+        String message=ProviderErrors.classify("Google",429,"RESOURCE_EXHAUSTED");
+        assertTrue(message.contains("project's rate or daily quota"));
+        assertTrue(message.contains("key is saved"));
+        assertTrue(message.contains("on-phone AI"));
+        assertFalse(message.contains("Paste an active"));
+    }
     public void testPowerControlSavesAcrossReopen() throws Throwable {
         MainActivity a=getActivity();runTestOnUiThread(()->{
             a.setPetEnabled(false);
@@ -18,6 +25,19 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
             a.show("Talk");assertFalse(a.petFace.expression().equals("off"));
         });
         assertTrue(a.getSharedPreferences("milo",0).getBoolean("pet_enabled",false));
+    }
+    public void testPhoneSpeakerAndSpeechInputAvailable() throws Throwable {
+        MainActivity a=getActivity();
+        long deadline=android.os.SystemClock.uptimeMillis()+10000;
+        while(!a.voiceReady&&android.os.SystemClock.uptimeMillis()<deadline)android.os.SystemClock.sleep(100);
+        assertTrue("Android text-to-speech voice did not initialize",a.voiceReady);
+        android.content.Intent speech=new android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        assertNotNull("No Android speech input activity is available",speech.resolveActivity(a.getPackageManager()));
+        runTestOnUiThread(()->{
+            a.setPetEnabled(true);
+            int result=a.voice.speak("Hello, this is a Milo speaker test on your phone.",android.speech.tts.TextToSpeech.QUEUE_FLUSH,null,"milo-device-test");
+            assertEquals("Android rejected the spoken reply",android.speech.tts.TextToSpeech.SUCCESS,result);
+        });
     }
     public void testPeopleLocalListAndCloudActivationState() throws Throwable {
         MainActivity a=getActivity();

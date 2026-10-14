@@ -16,11 +16,11 @@ if (downloadButton) {
         parts.push(await response.arrayBuffer());
       }
       const byteLength = parts.reduce((total, part) => total + part.byteLength, 0);
-      if (byteLength !== 63700122) throw new Error("Download size did not match");
+      if (byteLength !== 63700118) throw new Error("Download size did not match");
       const apk = new Blob(parts, { type: "application/vnd.android.package-archive" });
       const digest = await crypto.subtle.digest("SHA-256", await apk.arrayBuffer());
       const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
-      if (hash !== "F21CDAD371412AEC12D31B0A7003F6E6E09B58F828B18E87BB30B182177775C2") throw new Error("Download integrity check failed");
+      if (hash !== "9AE1EB40906E2C06DBDF9AC57B7B60B81FFB70F6CBF7092F234C127E410BFBCE") throw new Error("Download integrity check failed");
       const objectUrl = URL.createObjectURL(apk);
       const link = document.createElement("a");
       link.href = objectUrl;
