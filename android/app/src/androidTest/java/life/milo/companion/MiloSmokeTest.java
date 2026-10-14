@@ -7,6 +7,13 @@ import java.util.concurrent.atomic.AtomicReference;
 @SuppressWarnings("deprecation")
 public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity> {
     public MiloSmokeTest(){super(MainActivity.class);}
+    public void testSmallLocalModelPromptUsesQwenChatFormat() throws Exception {
+        String prompt=PortableLocalAi.localPrompt(true,"Milo","English","","Gentle","Hello",new java.util.ArrayList<>(),"Mood: Okay");
+        assertTrue(prompt.startsWith("<|im_start|>system\n"));
+        assertTrue(prompt.contains("<|im_start|>user\nHello<|im_end|>"));
+        assertTrue(prompt.endsWith("<|im_start|>assistant\n"));
+        assertFalse(prompt.contains("<start_of_turn>"));
+    }
     public void testGeminiQuotaGuidanceKeepsSavedKey() {
         String message=ProviderErrors.classify("Google",429,"RESOURCE_EXHAUSTED");
         assertTrue(message.contains("project's rate or daily quota"));
@@ -81,6 +88,8 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
     public void testProviderSetupSavesEncryptedKeysAndDisconnects() throws Throwable {
         MainActivity a=getActivity();runTestOnUiThread(()->{
             for(String pid:new String[]{AiProvider.GEMINI,AiProvider.OPENAI,AiProvider.CLAUDE}){
+                // A real phone may already have a private connection. Never replace or disconnect it.
+                if(KeyVault.hasKeyForProvider(a,pid))continue;
                 android.widget.LinearLayout area=new android.widget.LinearLayout(a);a.renderProviderSetup(area,pid);
                 android.widget.EditText key=null;android.widget.CheckBox consent=null;android.widget.Button save=null,disconnect=null;
                 for(int i=0;i<area.getChildCount();i++){android.view.View v=area.getChildAt(i);if(v instanceof android.widget.EditText&&((android.widget.EditText)v).getHint().toString().contains("API key"))key=(android.widget.EditText)v;if(v instanceof android.widget.CheckBox)consent=(android.widget.CheckBox)v;if(v instanceof android.widget.Button){String label=((android.widget.Button)v).getText().toString();if(label.equals("Save connection"))save=(android.widget.Button)v;if(label.equals("Disconnect this provider"))disconnect=(android.widget.Button)v;}}

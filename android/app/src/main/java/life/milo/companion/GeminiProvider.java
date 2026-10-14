@@ -24,7 +24,11 @@ final class GeminiProvider extends AiProvider {
             String style, String prompt, List<JSONObject> history,
             String context, boolean useSearch, Consumer<String> partial) throws Exception {
         String selected="auto".equals(model)?GeminiModels.discover(key,useSearch):model;
-        return GeminiClient.request(key, name, language, practice, style,
+        try{return GeminiClient.request(key, name, language, practice, style,
                 prompt, history, context, useSearch, partial,selected);
+        }catch(MainActivity.ApiFailure failure){
+            if(useSearch&&failure.getMessage().contains("quota (429)"))throw new MainActivity.ApiFailure("Google's web-search model "+selected+" has no available quota for this project (429). Your key is saved. Retry without search for a normal chat reply, or check this model's limits in Google AI Studio.");
+            throw failure;
+        }
     }
 }

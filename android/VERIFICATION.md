@@ -1,5 +1,12 @@
 # Prototype verification — latest: 14 October 2026
 
+## Milo 1.11 — tested local Qwen and search quota fix
+
+- Version code 12. Android build, test APK and lint passed. All 16 smoke tests passed on the connected Galaxy S23 after making setup tests preserve existing saved keys.
+- Imported the public 546,660,344-byte Qwen 2.5 0.5B .task model and generated a reply on the S23 in a 5.7-second diagnostic run. The model remains in app-private storage; inference uses the on-device MediaPipe runtime. Performance and compatibility on other phones remain unverified.
+- On this phone, a short Gemini request without search succeeded. With search enabled, Milo selected gemini-3.8-flash and received 429. A direct gemini-2.5-flash grounded request returned 404 for this key. Ordinary chat now leaves web search off; a grounded quota error offers an explicit retry without search. Google Search grounding has a separate quota and may require billing, depending on model/project.
+- Version 1.11 debug APK SHA-256: 6AB14004C974F00C07B5F2370ACD974E0BFB4BE440366C2DB002C2BAAC98445F. This is a debug-signed prototype, not a Play Store release.
+
 ## Milo 1.10 — Gemini quota guidance
 
 - Version code 11. `assembleDebug`, `assembleDebugAndroidTest`, and `lintDebug` passed. On a Galaxy S23, the quota guidance and Android voice-service tests passed (2 tests). The device accepted a spoken test request; audible sound still depends on phone volume and speaker output.
