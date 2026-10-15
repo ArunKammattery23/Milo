@@ -1,11 +1,11 @@
-# Milo Android personal prototype 1.8
+# Milo Android personal prototype 2.0
 
-Local AI is the default; cloud APIs are optional. Android 8 or newer can install the app. On-device AI offers an imported Gemma 3 1B `.task` model through MediaPipe, or Gemini Nano when Android AICore supports the phone. Local inference has no per-request API fee after the model download, but model availability, storage, battery use and performance vary by phone. The imported model needs substantial free storage and can take time to respond.
+Local AI is the default; cloud APIs are optional. Android 8 or newer can install the app. The recommended on-device model is Google's Gemma 4 E2B (2.6 GB, Apache-2.0), run on the phone's GPU through LiteRT-LM with a CPU fallback; Setup downloads it on Wi-Fi straight into Milo's app folder. Smaller imported `.task` models (Qwen 2.5 0.5B, Gemma 3 1B) through MediaPipe and system Gemini Nano remain as alternatives. Local inference has no per-request API fee after the model download, but model availability, storage, battery use and performance vary by phone. The imported model needs substantial free storage and can take time to respond.
 
 ## Start on your phone
 
 1. Install Milo-Android-Test.apk. This is a debug-signed personal prototype.
-2. Choose On-device AI, open Setup and import the supported Gemma 3 1B `.task` file with Android's file picker, or check whether Gemini Nano is available. The Setup screen links to the official model source and explains its license. Once ready, use Talk. No API key is needed for local text generation.
+2. Open Setup → Free on-phone AI → Download Gemma 4 (Wi-Fi, 2.6 GB; about 2.9 GB free storage needed), then Use Gemma 4. Smaller `.task` models can still be imported with Android's file picker, or check whether Gemini Nano is available. The Setup screen links to the official model source and explains its license. Once ready, use Talk. No API key is needed for local text generation.
 3. If local AI is unavailable, offline Comfort, Goals, Memories and prepared lessons still work. Cloud AI is optional: choose Gemini, OpenAI API, Claude or a compatible HTTPS API, get a developer key from that provider, review the data/price notes and Save connection. Gemini uses automatic model selection by default; manual model choice is under Advanced.
 4. Test saved connection sends only a short hello with no private mood/goal/history context. It can use quota or incur provider charges. A saved encrypted key alone does not prove live access.
 5. For sound, enable Milo, choose a supported spoken language, use Setup → Test speaker and raise media volume. Android voice settings can install/select a speech engine and voice. Failed playback is shown explicitly.
@@ -17,7 +17,13 @@ Cloud chat streams text. Google Search is available only for Gemini in this prot
 
 ## Floating pet
 
-Open Setup → Show floating Milo pet, allow notifications, then allow Display over other apps in Android settings. Return to Milo to start the pet. Drag it, tap it to open Milo, or long press to hide it. Hide floating pet in Setup, Hide pet in its ongoing notification and Off also remove the overlay. It shows Milo expressions while other apps are open; it does not activate the microphone or read screen contents. It starts only at your request, never at reboot. Android may stop it for battery/system reasons. This independent Android pet uses simple illustrated expressions; it is not connected to ChatGPT Work Pets.
+Open Setup → Show floating Milo pet, allow notifications, then allow Display over other apps in Android settings. Return to Milo to start the pet. Drag it anywhere; it stays where you drop it. Tap it to talk hands-free: it listens, thinks and answers aloud, then listens again. Tap while it listens to finish speaking, or while it speaks to interrupt. Hold it to open Milo. Drop it on the ✕ that appears while dragging, use Hide pet in its notification, or turn Milo Off to remove it. A bubble shows what it heard and its reply. It blinks and breathes, moves its mouth while speaking, shows sound waves while listening and dots while thinking, then takes the tone of its reply. The first tap asks for microphone permission; the microphone is used only during a conversation you start, with a Stop talking notification, and three silent turns end it. It never reads screen contents.
+
+With Gemma 4 the model is preloaded when the pet appears (about 6–12 s on the GPU), and Milo's instructions are processed while you speak. On the Galaxy S23 Ultra, Milo starts answering aloud about 2.7 s after you stop speaking a Malayalam question; follow-up text starts in about 0.2 s.
+
+## Malayalam and voices
+
+Choose Malayalam as the spoken language in Setup. Gemma 4 then replies in everyday spoken Malayalam in Malayalam script. Speech uses Google's voices (offline when the voice is installed, otherwise online). Setup → Milo's voice lists the voices for your language; Voice style offers Friendly, Cute pet, Natural, Calm and Deep. Milo shades each reply by its tone: brighter when playful or celebrating, slower and softer when comforting. Malayalam speech recognition on this phone needs internet; Google offers no offline Malayalam recognizer here, while the AI reply itself stays on the phone. It starts only at your request, never at reboot. Android may stop it for battery/system reasons. This independent Android pet uses simple illustrated expressions; it is not connected to ChatGPT Work Pets.
 
 ## Other tools
 
@@ -37,7 +43,7 @@ There is a 30-attempt daily cloud limit per installation, not a billing guarante
 
 ## Build and verification
 
-Java 21, Gradle 8.14, Android SDK 36, AGP 8.13.2, ML Kit genai-prompt 1.0.0-beta4 and MediaPipe tasks-genai 0.10.27. Build: assembleDebug lintDebug assembleDebugAndroidTest. Use -PmiloBuildDir pointing to a writable external build directory if the checkout is on OneDrive.
+Java 21, Gradle 8.14, Android SDK 36, AGP 8.13.2, LiteRT-LM 0.18.0, ML Kit genai-prompt 1.0.0-beta4 and MediaPipe tasks-genai 0.10.27. Build: assembleDebug lintDebug assembleDebugAndroidTest. Use -PmiloBuildDir pointing to a writable external build directory if the checkout is on OneDrive.
 
 See VERIFICATION.md for exactly what passed and what still needs real-phone/credential testing.
 

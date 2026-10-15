@@ -1,10 +1,26 @@
 plugins { id 'com.android.application' }
 if (file('google-services.json').exists()) { apply plugin: 'com.google.gms.google-services' }
 if (providers.gradleProperty('miloBuildDir').isPresent()) { layout.buildDirectory.set(file(providers.gradleProperty('miloBuildDir').get() + '/app')) }
+// sherpa-onnx (on-phone AI voices) ships as an AAR on GitHub releases, not Maven; fetch it once and verify its checksum.
+def sherpaVersion = '1.13.8'
+def sherpaSha256 = '633c24321e06b1fe79feafa03ea16cbc0f8a286641e2da3559bac91bdb13bd96'
+def sherpaAar = rootProject.file("third_party/sherpa-onnx-${sherpaVersion}.aar")
+def fetchSherpa = tasks.register('fetchSherpaOnnx') {
+    outputs.file(sherpaAar)
+    doLast {
+        if (!sherpaAar.exists()) {
+            sherpaAar.parentFile.mkdirs()
+            new URL("https://github.com/k2-fsa/sherpa-onnx/releases/download/v${sherpaVersion}/sherpa-onnx-${sherpaVersion}.aar").withInputStream { input -> sherpaAar.withOutputStream { it << input } }
+        }
+        def digest = java.security.MessageDigest.getInstance('SHA-256').digest(sherpaAar.bytes).encodeHex().toString()
+        if (digest != sherpaSha256) { sherpaAar.delete(); throw new GradleException("sherpa-onnx AAR checksum mismatch: ${digest}") }
+    }
+}
+preBuild.dependsOn fetchSherpa
 android {
     namespace 'life.milo.companion'
     compileSdk 36
-    defaultConfig { applicationId 'life.milo.companion'; minSdk 26; targetSdk 36; versionCode 12; versionName '1.11'; buildConfigField 'boolean', 'PEOPLE_RELAY_ENABLED', 'false'; testInstrumentationRunner 'android.test.InstrumentationTestRunner' }
+    defaultConfig { applicationId 'life.milo.companion'; minSdk 26; targetSdk 36; versionCode 18; versionName '2.4'; buildConfigField 'boolean', 'PEOPLE_RELAY_ENABLED', 'false'; testInstrumentationRunner 'android.test.InstrumentationTestRunner'; ndk { abiFilters 'arm64-v8a', 'x86_64' } }
     buildFeatures { buildConfig true }
     useLibrary 'android.test.runner'
     useLibrary 'android.test.base'
@@ -12,6 +28,9 @@ android {
 }
 dependencies {
     implementation 'com.google.mediapipe:tasks-genai:0.10.27'
+    implementation 'com.google.ai.edge.litertlm:litertlm-android:0.18.0'
+    implementation files(sherpaAar)
+    implementation 'org.apache.commons:commons-compress:1.28.0'
     implementation 'com.google.mlkit:genai-prompt:1.0.0-beta4'
     implementation platform('com.google.firebase:firebase-bom:34.16.0')
     implementation 'com.google.firebase:firebase-auth'

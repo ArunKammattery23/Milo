@@ -12,6 +12,6 @@ public final class PeopleMessagingService extends FirebaseMessagingService {
         if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
         NotificationManager manager=getSystemService(NotificationManager.class);manager.createNotificationChannel(new NotificationChannel("people_messages","Messages from your people",NotificationManager.IMPORTANCE_DEFAULT));
         Intent open=new Intent(this,MainActivity.class).putExtra("open_people",true).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);PendingIntent tap=PendingIntent.getActivity(this,81,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        Notification n=new Notification.Builder(this,"people_messages").setSmallIcon(R.drawable.milo_icon).setContentTitle("New message in Milo").setContentText("Open Milo to read a message from your people.").setVisibility(Notification.VISIBILITY_PRIVATE).setAutoCancel(true).setContentIntent(tap).build();manager.notify(801,n);
+        Notification n=new Notification.Builder(this,"people_messages").setSmallIcon(R.drawable.ic_stat_milo).setContentTitle("New message in Milo").setContentText("Open Milo to read a message from your people.").setVisibility(Notification.VISIBILITY_PRIVATE).setAutoCancel(true).setContentIntent(tap).build();manager.notify(801,n);
     }
 }

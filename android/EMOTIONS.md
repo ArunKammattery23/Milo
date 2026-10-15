@@ -15,6 +15,19 @@ In Android Setup, choose Gentle, Playful, or Straightforward. This preference is
 | Learning or a gentle joke | Curious or playful | Encourage exploration and appropriate humour. |
 | Connection fails | Concerned | Explain the problem and let the user retry. |
 | User turns Milo off | Resting | Stop voice and reminders; no guilt or punishment. |
+| Unexpected news | Surprised | Wide eyes, a gold "!" and lifted wings; then respond to what was shared. |
+| Big good news | Excited | Star eyes and bursting sparkles; celebrate the user's effort, not obedience. |
+| A joke | Laughing | Closed eyes, a big laugh and tears of joy; stop joking if the user is struggling. |
+| A compliment | Shy | Looks away with extra blush; stay modest, no dependency. |
+| Thanks | Grateful | Closed happy eyes and rising hearts. |
+| Sad news | Sad | Teary eyes, a falling tear and drooping wings to show sympathy; follow with comfort, never guilt. |
+| Unclear request | Confused | One brow up and a "?"; ask the user to clarify. |
+| Good night | Sleepy | Half-closed eyes, a yawn and small "z"s (in colour, unlike Off). |
+| Milo corrects itself | Oops | "> <" eyes and a sweat drop; fix the mistake calmly. |
+
+Version 2.1 redraws Milo as a small fairy: fluffy lavender-blue hair, sparkling eyes, a flower and star hair clip, translucent wings, a petal dress and star boots. Expressions are drawn rather than pictured: open sparkling eyes, happy closed eyes, a wink, a fang smile, a little "o", a soft smile, a wavy worried mouth, raised brows, a heart, a sweat drop, thought bubbles, listening waves and sleepy "z"s.
+
+Version 2.0 adds a reply tone. With Gemma 4, Milo starts each reply with a hidden tag for its own speaking tone (happy, playful, curious, comfort, calm, celebrate or concerned). The tag is removed from the text; it sets the pet's expression after the reply and shades the voice's pitch and speed. It describes Milo's tone, never the user's feelings. The pet is animated (breathing, blinking, a moving mouth while speaking, sound waves while listening, bouncing dots while thinking) and stays still when Android animations are turned off.
 
 Setup's expression preview does not activate the microphone or send an AI request. Illustrations follow app events and the mood the user selects; they do not classify private speech, facial expressions, or mental health.
 

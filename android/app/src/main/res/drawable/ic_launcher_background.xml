@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher icon background: pastel sky with sparkles. Generated from the Milo fairy geometry. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M0 0H108V108H0Z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="18" android:startY="18" android:endX="90" android:endY="90"><item android:offset="0" android:color="#FFFFF0F6"/><item android:offset="0.55" android:color="#FFEFE9FF"/><item android:offset="1" android:color="#FFDFE8FF"/></gradient></aapt:attr></path>
+    <path android:pathData="M27 23Q27 27 31 27Q27 27 27 31Q27 27 23 27Q27 27 27 23Z" android:fillColor="#E6F3C34C"/>
+    <path android:pathData="M83 27Q83 30 86 30Q83 30 83 33Q83 30 80 30Q83 30 83 27Z" android:fillColor="#FFFFFFFF"/>
+    <path android:pathData="M84 76.5Q84 80 87.5 80Q84 80 84 83.5Q84 80 80.5 80Q84 80 84 76.5Z" android:fillColor="#CCF3C34C"/>
+    <path android:pathData="M24 75.4Q24 78 26.6 78Q24 78 24 80.6Q24 78 21.4 78Q24 78 24 75.4Z" android:fillColor="#FFFFFFFF"/>
+    <path android:pathData="M68.8 22a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0 -2.4 0Z" android:fillColor="#FFFFFFFF"/>
+    <path android:pathData="M34.9 88a1.1 1.1 0 1 0 2.2 0a1.1 1.1 0 1 0 -2.2 0Z" android:fillColor="#CCF3C34C"/>
+</vector>

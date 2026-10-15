@@ -15,3 +15,6 @@
 **/service-account*.json
 **/.firebase/
 **/*-debug.log
+
+# Fetched build dependencies (verified by checksum in app/build.gradle)
+**/third_party/

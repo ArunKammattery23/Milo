@@ -18,6 +18,9 @@ final class CompanionStyle {
         case "listening":return "Listening";case "thinking":return "Thinking";case "speaking":return "Speaking";
         case "comfort":return "Here with you";case "calm":return "A gentle pause";case "curious":return "Ready to learn";
         case "celebrate":return "Your effort matters";case "playful":return "A little playfulness";case "concerned":return "Let’s take this slowly";
+        case "surprised":return "Oh, wow!";case "excited":return "This is exciting!";case "laughing":return "That made me laugh";
+        case "shy":return "Aww, thank you";case "grateful":return "Thank you for sharing";case "sad":return "I'm sorry that happened";
+        case "angry":return "Hmph! That is not fair";case "confused":return "Help me understand";case "sleepy":return "Getting sleepy";case "oops":return "Oops, let me fix that";
         case "off":return "Resting · voice and reminders off";default:return "Ready when you are";
     }}
 }

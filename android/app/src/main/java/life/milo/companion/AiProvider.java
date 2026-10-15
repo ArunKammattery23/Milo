@@ -79,11 +79,12 @@ abstract class AiProvider {
 
     /* ---- factory ---- */
 
-    /** Returns the provider the user has selected, or Gemini as default. */
+    /** Returns the provider the user has selected; on-phone AI by default. */
     static AiProvider current(Context context) {
         SharedPreferences prefs = context.getSharedPreferences("milo", Context.MODE_PRIVATE);
         String id = prefs.getString("ai_provider", LOCAL);
-        if (LOCAL.equals(id) && prefs.getBoolean("portable_local",false)) return new PortableLocalAi(context);
+        if (LOCAL.equals(id) && prefs.getBoolean("portable_local",false))
+            return LiteRtLocalAi.KIND.equals(prefs.getString("portable_model","")) ? new LiteRtLocalAi(context) : new PortableLocalAi(context);
         if (GEMINI.equals(id)) {
             String model=prefs.getString("model_gemini","auto");
             if("gemini-2.5-flash".equals(model)){model="auto";prefs.edit().putString("model_gemini",model).apply();}

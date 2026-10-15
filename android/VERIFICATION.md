@@ -1,4 +1,47 @@
-# Prototype verification — latest: 14 October 2026
+# Prototype verification — latest: 15 October 2026
+
+## Milo 2.3 — fairy app icon
+
+- Version code 17. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed. **All 23 smoke tests passed on the Galaxy S23 Ultra**; Milo settings were byte-identical before and after.
+- The launcher icon is now an adaptive icon (`mipmap/ic_launcher`, `ic_launcher_round`) showing the fairy's head and shoulders on a pastel background with sparkles, plus a monochrome layer for Android themed icons. Notifications use a new white fairy silhouette (`drawable/ic_stat_milo`); the old green `milo_icon` was removed. The web companion's `icon.svg` uses the same artwork. All layers are generated from the pet geometry.
+- New test `testAppIconDrawsFairy` checks the icon is adaptive with a themed layer, draws it, and saves a review sheet. The icon was checked in the Samsung app drawer and in the notification shade.
+- Version 2.3 debug APK SHA-256: 86E753141DA8D2BF6376C76547A4572991D33CAAD2D8D63C411A55E698C3105B.
+
+## Milo 2.2 — 20 expressions
+
+- Version code 16. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed. **All 22 smoke tests passed on the Galaxy S23 Ultra**; Milo settings were byte-identical before and after.
+- Nine expressions added to the app, the floating pet and the Home view: surprised, excited, laughing, shy, grateful, sad, confused, sleepy and oops (20 in total including listening, thinking, speaking and off). The artwork test now draws all 20 and checks each differs from the previous one; the gallery and all 16 Home picker expressions were visually checked.
+- Gemma 4 can choose all of them as reply tones. A one-off check on the S23 chose laughing for a joke, grateful for thanks (English and Malayalam), sleepy for good night, sad for a bereavement, confused for nonsense words and celebrate for a new job; it chose grateful rather than shy for a compliment and calm rather than oops when corrected. Tone choice varies between replies.
+- Version 2.2 debug APK SHA-256: C3B644F181FF5050F7891CA5BD4547B192AC8C300B746AFD49D5A50D99A9749A.
+
+## Milo 2.1 — new fairy design
+
+- Version code 15. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed. **All 22 smoke tests passed on the Galaxy S23 Ultra**; Milo settings were byte-identical before and after.
+- At the owner's request Milo is redrawn as a chibi fairy (lavender-blue fluffy hair with a curl, large sparkling blue eyes, blush, flower/star/pearl hair clip with a ribbon, translucent fluttering wings, petal dress with a star bow, white boots with gold stars), inspired by a reference image the owner supplied. It is original vector drawing code, not a copy of that image.
+- The same design is used in Talk, the floating pet, Setup's expression preview and the built-in Home view (SVG with fluttering wings, twinkles and the same expressions); the web companion's Home copy matches.
+- New device test `testPetArtworkDrawsEveryExpression` draws all 11 expressions (happy, playful, curious, comfort, calm, celebrate, concerned, listening, thinking, speaking, off), checks each draws and differs from the previous one, and saves a gallery image. The gallery, the Home expression picker and the floating pet over the home screen were visually inspected on the phone.
+- The launcher icon was unchanged in 2.1 (replaced in 2.3).
+- Version 2.1 debug APK SHA-256: 41A37A0C9E95D48DE57BC1A67BE47B28C6A7944F9305FC3812750CDE0D28E002.
+
+## Milo 2.0 — Gemma 4 on the GPU, a talking floating pet, Malayalam voices
+
+- Version code 14. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed (lint prints Kotlin 2.4 metadata notices from LiteRT-LM 0.18.0's dependencies; no lint errors). **All 21 smoke tests passed on the Galaxy S23 Ultra** (SM-S918B, Android 16, Snapdragon 8 Gen 2); Milo settings were byte-identical before and after the run.
+- Gemma 4 E2B (`gemma-4-E2B-it.litertlm`, 2,588,147,712 bytes, SHA-256 181938105E0EEFD105961417E8DA75903EACDA102C4FCE9CE90F50B97139A63C, Apache-2.0, litert-community) runs through LiteRT-LM 0.18.0 on the GPU. Load: 13.8 s the first time, 5–12 s later (Milo preloads it when the app opens or the pet appears). First text: about 0.2 s on a follow-up turn in the same conversation, 0.65–1.5 s for a new conversation; a short reply finishes in 1–3 s. A GPU start crash would switch future starts to the CPU automatically; the CPU path was not exercised on this phone.
+- Malayalam: asked in Malayalam script, Gemma 4 answered in natural Malayalam script with a fitting tone tag (e.g. comfort). Google TTS has Malayalam voices on this phone (mlc, mle; an embedded mla voice also loads offline). Google speech recognition supports Malayalam online only on this phone.
+- Real voice loop test: Milo in the background, a real touch on the floating pet, a Malayalam question spoken through the phone speaker, Google recognition transcribed it exactly, Gemma 4 answered and the pet spoke the answer in Malayalam, with expressions listening → thinking → speaking → calm. Spoken answer began about 2.7 s after the question ended. It also passed with Milo in the foreground. A human voice in a noisy room was not tested.
+- Android 16 allows the microphone session when the user taps the pet (the service changes to special-use + microphone); a programmatic start from the background was refused, so a see-through one-time screen remains as a fallback. Fixed during testing: an 800 ms "complete silence" extra made Google end listening before the user started speaking.
+- Fixed: with on-phone AI already selected, Setup never showed the on-phone section (the hidden picker never reported a selection).
+- Qwen 2.5 0.5B and its 500 MB runtime cache were removed from this phone at the owner's request after Gemma 4 worked; the Qwen path remains in the app for other phones.
+- Version 2.0 debug APK (114 MB) SHA-256: 84C814825678A710FC0E4996745F9BC3E5C63187FEB319D7F09B394A5CF2703F. Debug-signed prototype, not a Play Store release.
+
+## Milo 1.12 — local model stays loaded and replies stream
+
+- Version code 13. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed. All 17 smoke tests passed on the connected Galaxy S23 Ultra (Android 16) with the imported Qwen 2.5 0.5B model.
+- The imported model now stays loaded between messages instead of reloading for every reply; each reply still starts a fresh session with the same short recent-chat prompt. It is released when its file is replaced or erased, and when Android reports memory pressure with Milo in the background. While loaded, Milo used about 880 MB (PSS) on this phone.
+- Replies now stream into the Talk bubble and spoken sentences start while the rest generates. On the S23 Talk screen: first text about 0.3–0.5 s after Send, full multi-paragraph reply in 3.6–4.9 s; second message reported `warm load=0ms`. With the model file already in the phone's file cache, a reload was only about 0.1–0.25 s; the saving is larger after a reboot or memory pressure. Timings are logged under the `MiloLocalAi` logcat tag (no message content).
+- New device test `testImportedLocalModelStreamsAndStaysLoaded` runs real inference twice, checks that streamed text grows in order and matches the final reply, and that the second reply reuses the loaded engine; it skips on devices without an imported model.
+- Smoke tests now snapshot and restore all Milo settings. Previously the provider setup test left a real phone set to Claude instead of the user's chosen AI.
+- Version 1.12 debug APK SHA-256: 26391FDA2EEAD88C0DE2EAD662C534C642B53E5672819700D4BBA931F401FFD4. Debug-signed prototype, not a Play Store release.
 
 ## Milo 1.11 — tested local Qwen and search quota fix
 

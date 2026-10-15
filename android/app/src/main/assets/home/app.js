@@ -36,28 +36,44 @@ const androidCard=document.createElement('div');androidCard.className='breath-ca
 const face=document.createElement('div');
 face.className='expression-status';face.setAttribute('aria-live','polite');
 $('#pet').after(face);
-const svg=$('#pet svg'),eyes=svg.querySelectorAll('ellipse');
-const left=eyes[2],right=eyes[3];
-const mouth=[...svg.querySelectorAll('path')].find(p=>p.getAttribute('d')==='M116 132Q131 149 146 132');
+const svg=$('#pet svg'),part=id=>svg.querySelector('#'+id);
 svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');
 const brows=document.createElementNS('http://www.w3.org/2000/svg','path');
-brows.setAttribute('fill','none');brows.setAttribute('stroke','#426347');brows.setAttribute('stroke-width','3');brows.setAttribute('stroke-linecap','round');svg.append(brows);
+brows.setAttribute('fill','none');brows.setAttribute('stroke','#7c78c2');brows.setAttribute('stroke-opacity','.8');brows.setAttribute('stroke-width','2.2');brows.setAttribute('stroke-linecap','round');svg.append(brows);
+const SMILE='M91 131Q100 133 109 131Q107 144 100 144Q93 144 91 131Z',SOFT='M93 133Q100 139 107 133',WORRY='M64 95L80 91M136 95L120 91';
 const expressions={
-happy:{name:'Happy',label:'Happy to see you',mouth:'M116 132Q131 149 146 132',eyes:[9,9],brows:'M90 103Q98 99 106 103M157 103Q165 99 173 103'},
-comfort:{name:'Comforting',label:'One gentle step at a time',mouth:'M119 136Q131 143 143 136',eyes:[7,7],brows:'M90 106Q98 99 106 103M157 103Q165 99 173 106'},
-calm:{name:'Calm',label:'Taking a gentle pause',mouth:'M119 136Q131 143 143 136',eyes:[2,2],brows:'M90 106Q98 104 106 106M157 106Q165 104 173 106'},
-curious:{name:'Curious',label:'Ready to learn',mouth:'M125 135Q131 145 137 135Q131 129 125 135',eyes:[10,11],brows:'M90 103Q98 98 106 103M157 98Q165 92 173 98'},
-celebrate:{name:'Celebrating',label:'One little step forward!',mouth:'M115 132Q131 156 147 132Z',eyes:[3,3],brows:'M90 103Q98 97 106 103M157 103Q165 97 173 103'},
-playful:{name:'Playful',label:'A little smile for your day',mouth:'M116 133Q133 152 147 130',eyes:[9,2],brows:'M90 103Q98 98 106 103M157 104Q165 101 173 104'},
-concerned:{name:'Concerned',label:'Let’s make this a little easier',mouth:'M119 140Q131 135 143 140',eyes:[7,7],brows:'M90 105Q98 106 106 99M157 99Q165 106 173 105'}
+happy:{name:'Happy',label:'Happy to see you',mouth:SMILE,open:true,eyes:['open','open'],brows:''},
+comfort:{name:'Comforting',label:'One gentle step at a time',mouth:SOFT,eyes:['open','open'],brows:WORRY,extra:['heart']},
+calm:{name:'Calm',label:'Taking a gentle pause',mouth:SOFT,eyes:['shut','shut'],brows:''},
+curious:{name:'Curious',label:'Ready to learn',mouth:'M96 135.5A4 4.5 0 1 0 104 135.5A4 4.5 0 1 0 96 135.5Z',open:true,eyes:['open','open'],scale:[1.3,1.3],brows:'M64 90Q72 85 81 89M119 89Q128 85 136 90'},
+celebrate:{name:'Celebrating',label:'One little step forward!',mouth:'M89 131Q100 133.5 111 131Q108.5 147 100 147Q91.5 147 89 131Z',open:true,eyes:['shut','shut'],brows:''},
+playful:{name:'Playful',label:'A little smile for your day',mouth:SMILE,open:true,eyes:['open','shut'],brows:'',extra:['tongueOut']},
+concerned:{name:'Concerned',label:'Let’s make this a little easier',mouth:'M93 136Q96.5 133 100 136Q103.5 139 107 136',eyes:['open','open'],scale:[1.12,1.12],brows:WORRY,extra:['sweat']},
+surprised:{name:'Surprised',label:'Oh, wow!',mouth:'M94.5 137A5.5 7 0 1 0 105.5 137A5.5 7 0 1 0 94.5 137Z',open:true,eyes:['wide','wide'],scale:[1.36,1.36],brows:'M61 87Q72 79 83 85M117 85Q128 79 139 87',extra:['bang']},
+excited:{name:'Excited',label:'This is exciting!',mouth:'M88.3 131Q100 133.6 111.7 131Q109.1 147.9 100 147.9Q90.9 147.9 88.3 131Z',open:true,eyes:['star','star'],scale:[1.3,1.3],brows:'',extra:['burst']},
+laughing:{name:'Laughing',label:'That made me laugh',mouth:'M86.95 131Q100 133.9 113.05 131Q110.15 149.85 100 149.85Q89.85 149.85 86.95 131Z',open:true,eyes:['shut','shut'],brows:'',extra:['joy']},
+shy:{name:'Shy',label:'Aww, thank you',mouth:'M95 134Q97.5 136.5 100 134Q102.5 136.5 105 134',eyes:['open','open'],brows:'',extra:['hatch']},
+grateful:{name:'Grateful',label:'Thank you for sharing',mouth:SOFT,eyes:['shut','shut'],brows:'',extra:['hearts']},
+sad:{name:'Sad',label:'I’m sorry that happened',mouth:'M94 138Q100 132 106 138',eyes:['open','open'],scale:[1.22,1.22],brows:WORRY,extra:['teary','tear']},
+confused:{name:'Confused',label:'Help me understand',mouth:'M95 137Q98.5 133.5 101 136Q103.5 138 106 134.5',eyes:['open','open'],scale:[1.27,1.04],brows:'M61 88Q72 80 83 85M119 93L136 95',extra:['what']},
+sleepy:{name:'Sleepy',label:'Getting sleepy',mouth:'M95.5 135.5A4.5 5 0 1 0 104.5 135.5A4.5 5 0 1 0 95.5 135.5Z',open:true,eyes:['half','half'],brows:'',extra:['zz']},
+oops:{name:'Oops',label:'Oops, let me fix that',mouth:'M91 135Q94 132 97 135Q100 138 103 135Q106 132 109 135',eyes:['squeeze','squeeze'],brows:WORRY,extra:['sweat','hatch']}
 };
+const EXTRAS=['heart','sweat','tongueOut','bang','what','tear','teary','joy','hearts','burst','zz','hatch'];
 const expressionButtons=[];
 function moodExpression(){return {low:'comfort',tired:'calm',okay:'happy',good:'happy',great:'celebrate'}[state.moods[day()]]||'happy';}
 function express(kind){
 const key=Object.prototype.hasOwnProperty.call(expressions,kind)?kind:'happy',expression=expressions[key];
 face.textContent=expression.label;$('#pet').dataset.expression=key;
-left.setAttribute('ry',expression.eyes[0]);right.setAttribute('ry',expression.eyes[1]);
-mouth.setAttribute('d',expression.mouth);mouth.setAttribute('fill',key==='celebrate'?'#263d2c':'none');brows.setAttribute('d',expression.brows);
+['L','R'].forEach((side,i)=>{const mode=expression.eyes[i],closed=mode==='shut'||mode==='squeeze';
+part('eye'+side).setAttribute('transform',`translate(${side==='L'?72:128} 114) scale(${(expression.scale||[1.2,1.2])[i]})`);
+part('eyeOpen'+side).style.display=closed?'none':'';part('eyeShut'+side).style.display=mode==='shut'?'':'none';part('eyeSqueeze'+side).style.display=mode==='squeeze'?'':'none';
+part('eyeStar'+side).style.display=mode==='star'?'':'none';part('glint'+side).style.display=mode==='star'?'none':'';part('eyeLid'+side).style.display=mode==='half'?'':'none';
+const pupil=part('pupil'+side);pupil.style.display=mode==='star'?'none':'';pupil.setAttribute('rx',mode==='wide'?'3.6':'6');pupil.setAttribute('ry',mode==='wide'?'4.2':'7');});
+const mouth=part('mouth');mouth.setAttribute('d',expression.mouth);mouth.setAttribute('fill',expression.open?'#7a2e3e':'none');mouth.setAttribute('stroke-width',expression.open?'0':'2.2');
+part('tongue').style.display=expression.open&&!['curious','surprised','sleepy'].includes(key)?'':'none';part('fang').style.display=expression.mouth===SMILE?'':'none';
+EXTRAS.forEach(id=>part(id).style.display=(expression.extra||[]).includes(id)?'':'none');
+brows.setAttribute('d',expression.brows);
 $('#pet').setAttribute('aria-label',`Say hello to ${petName}. ${expression.name} expression: ${expression.label}`);
 expressionButtons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.expression===key)));
 }

@@ -17,6 +17,6 @@ public class ReminderReceiver extends BroadcastReceiver {
         if(Build.VERSION.SDK_INT>=33&&c.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
         NotificationManager n=c.getSystemService(NotificationManager.class);n.createNotificationChannel(new NotificationChannel("care","Gentle reminders",NotificationManager.IMPORTANCE_DEFAULT));PendingIntent open=PendingIntent.getActivity(c,3,new Intent(c,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         String message="MEMORY".equals(i.getAction())?"An important moment you saved is coming up. Open Memories.":"A small pause, a stretch, or one kind step? Choose what suits you.";
-        n.notify("MEMORY".equals(i.getAction())?603:602,new Notification.Builder(c,"care").setSmallIcon(R.drawable.milo_icon).setContentTitle(p.getString("pet_name","Milo")+" · a gentle reminder").setContentText(message).setContentIntent(open).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PRIVATE).build());if("DAILY".equals(i.getAction()))schedule(c);
+        n.notify("MEMORY".equals(i.getAction())?603:602,new Notification.Builder(c,"care").setSmallIcon(R.drawable.ic_stat_milo).setContentTitle(p.getString("pet_name","Milo")+" · a gentle reminder").setContentText(message).setContentIntent(open).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PRIVATE).build());if("DAILY".equals(i.getAction()))schedule(c);
     }
 }
