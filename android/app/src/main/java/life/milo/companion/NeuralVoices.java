@@ -25,10 +25,11 @@ final class NeuralVoices {
         "am_adam","am_echo","am_eric","am_fenrir","am_liam","am_michael","am_onyx","am_puck","am_santa","bf_alice","bf_emma","bf_isabella","bf_lily",
         "bm_daniel","bm_fable","bm_george","bm_lewis"};
     /** Friendly names for the English voices offered in Voice Studio. */
-    static final String[][] KOKORO_CHOICES={{"af_heart","Heart · warm girl"},{"af_bella","Bella · bright girl"},{"af_nicole","Nicole · soft whisper"},{"af_sky","Sky · light girl"},
-        {"af_sarah","Sarah · gentle"},{"af_nova","Nova · clear"},{"bf_emma","Emma · British girl"},{"am_puck","Puck · cheerful boy"},{"am_michael","Michael · calm boy"}};
+    static final String[][] KOKORO_CHOICES={{"af_heart","Heart · warm girl · best quality, slower"},{"af_bella","Bella · bright girl · slower"},{"af_nicole","Nicole · soft whisper · slower"},{"af_sky","Sky · light girl · slower"},
+        {"af_sarah","Sarah · gentle · slower"},{"af_nova","Nova · clear · slower"},{"bf_emma","Emma · British girl · slower"},{"am_puck","Puck · cheerful boy · slower"},{"am_michael","Michael · calm boy · slower"}};
 
-    static File root(Context c){File d=c.getExternalFilesDir("voices");return d!=null?d:new File(c.getFilesDir(),"voices");}
+    /** Voices live in private internal storage, unpacked by Milo itself, so the speech engine can always read them. */
+    static File root(Context c){return new File(c.getNoBackupFilesDir(),"voices");}
     static File dir(Context c,String kind){return new File(root(c),kind);}
     static File espeak(Context c){return new File(root(c),"espeak-ng-data");}
     static boolean installed(Context c,String kind){

@@ -74,7 +74,7 @@ final class LiteRtLocalAi extends AiProvider {
             :"";
         return systemInstruction(name,language,practice,style,context)
             +" You run fully on this phone with no internet or web search: never claim to look things up, and say when you are unsure."
-            +" Your words are spoken aloud: no markdown, emoji, headings or bullet lists unless the user asks; keep most replies to one to three short sentences."
+            +" Your words are spoken aloud: no markdown, emoji, headings or bullet lists unless the user asks; write in natural spoken sentences and paragraphs."
             +lang+ToneTag.instruction();
     }
 

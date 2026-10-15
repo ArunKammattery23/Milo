@@ -24,6 +24,7 @@ In Android Setup, choose Gentle, Playful, or Straightforward. This preference is
 | Unclear request | Confused | One brow up and a "?"; ask the user to clarify. |
 | Good night | Sleepy | Half-closed eyes, a yawn and small "z"s (in colour, unlike Off). |
 | Milo corrects itself | Oops | "> <" eyes and a sweat drop; fix the mistake calmly. |
+| Pretend play or an unfair situation | Angry | V brows, clenched teeth, an anger mark and a harsh "Hmph!" voice; only for play or indignation on the user's behalf, never at the user. |
 
 Version 2.1 redraws Milo as a small fairy: fluffy lavender-blue hair, sparkling eyes, a flower and star hair clip, translucent wings, a petal dress and star boots. Expressions are drawn rather than pictured: open sparkling eyes, happy closed eyes, a wink, a fang smile, a little "o", a soft smile, a wavy worried mouth, raised brows, a heart, a sweat drop, thought bubbles, listening waves and sleepy "z"s.
 

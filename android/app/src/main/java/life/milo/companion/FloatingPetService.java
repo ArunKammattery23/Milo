@@ -252,7 +252,7 @@ public final class FloatingPetService extends Service implements RecognitionList
         });
     }
     String language(){return MiloVoice.locale(prefs).getDisplayLanguage(Locale.ENGLISH);}
-    String voiceContext(){return "Current mood: "+prefs.getString("mood","Okay")+". Interests: "+prefs.getString("interests","")+". Current goal: "+prefs.getString("goal","")+". Hands-free voice chat through the floating pet: answer in one to three short spoken sentences.";}
+    String voiceContext(){return "Current mood: "+prefs.getString("mood","Okay")+". Interests: "+prefs.getString("interests","")+". Current goal: "+prefs.getString("goal","")+". Hands-free voice chat through the floating pet: keep casual answers short, but tell full stories and full motivational talks when asked.";}
     void speak(String words,String utterance,String chunkTone){
         if(!ttsReady||speech==null)return;mode=Mode.SPEAKING;
         speech.speak(MainActivity.cleanSpeech(words),chunkTone!=null?chunkTone:tone,utterance);

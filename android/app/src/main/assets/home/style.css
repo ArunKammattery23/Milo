@@ -31,3 +31,9 @@
 @keyframes milo-giggle{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
 @keyframes milo-jump{50%{transform:translateY(-10px)}}
 @media (prefers-reduced-motion:reduce){#pet .drip,#pet .rise{animation:none}}
+
+/* Angry: a quick shake and a pulsing anger mark (pretend games only). */
+#pet[data-expression="angry"] svg{animation:milo-giggle .12s linear 10}
+#pet .pulse path{transform-box:fill-box;transform-origin:50% 50%;animation:milo-pulse .6s ease-in-out infinite}
+@keyframes milo-pulse{50%{transform:scale(1.18)}}
+@media (prefers-reduced-motion:reduce){#pet .pulse path{animation:none}}

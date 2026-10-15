@@ -2,7 +2,7 @@
 
 Android companion for conversation, learning, goals and everyday wellbeing. Existing Milo artwork and System/Light/Dark themes are retained.
 
-Version 2.0 runs Google's Gemma 4 E2B on the phone's GPU through LiteRT-LM (offline, Malayalam and 140+ languages) and turns the floating pet into a hands-free talking companion with live expressions and tone-matched voices. Version 2.1 redraws Milo as a little fairy with fluttering wings; 2.2 gives her 20 expressions; 2.3 makes her the app icon.
+Version 2.0 runs Google's Gemma 4 E2B on the phone's GPU through LiteRT-LM (offline, Malayalam and 140+ languages) and turns the floating pet into a hands-free talking companion with live expressions and tone-matched voices. Version 2.1 redraws Milo as a little fairy with fluttering wings; 2.2 gives her 20 expressions; 2.3 makes her the app icon; 2.5 adds a voice studio with sweet character voices, emotion voices and an offline Malayalam AI voice.
 
 - `android/`: native app, Gradle wrapper, setup and device tests.
 - `web/`: companion UI and Android download guide.

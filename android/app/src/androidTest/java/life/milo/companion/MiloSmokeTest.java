@@ -70,6 +70,12 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
         int script=0,letters=0;for(char ch:ml.text.toCharArray()){if(Character.isLetter(ch)){letters++;if(ch>='ഀ'&&ch<='ൿ')script++;}}
         assertTrue("Malayalam reply should use Malayalam script: "+ml.text,letters>0&&script*10>=letters*7);
         android.util.Log.i("MiloLocalAi","Gemma4 test backend="+LiteRtLocalAi.backend()+" cold="+cold+"ms followUp="+followUp+"ms malayalam="+malayalam+"ms pieces="+parts.size()+" tones="+first.tone+","+second.tone+","+ml.tone);
+        // Stories and pep talks must be full length, not a quick one-liner.
+        MainActivity.GeminiReply story=ai.chat("","Milo","English","","Gentle","Please tell me a bedtime story about a brave little star.",new java.util.ArrayList<>(),"Current mood: Okay.",false,x->{});
+        MainActivity.GeminiReply pep=ai.chat("","Milo","English","","Gentle","Motivate me, I feel too lazy to study today.",new java.util.ArrayList<>(),"Current mood: Tired.",false,x->{});
+        int storyWords=story.text.split("\s+").length,pepWords=pep.text.split("\s+").length;
+        android.util.Log.i("MiloLocalAi","story words="+storyWords+" pep words="+pepWords);android.util.Log.i("MiloLocalAi","STORY: "+story.text);
+        assertTrue("a story should be long, got "+storyWords+" words",storyWords>=120);assertTrue("a pep talk should be full, got "+pepWords+" words",pepWords>=60);
         android.util.Log.i("MiloLocalAi","EN1: "+first.text);android.util.Log.i("MiloLocalAi","EN2: "+second.text);android.util.Log.i("MiloLocalAi","ML: "+ml.text);
         LiteRtLocalAi.release();assertNull(LiteRtLocalAi.engine);
     }
@@ -196,14 +202,14 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
         assertTrue("speaker did not start",ready.await(20,java.util.concurrent.TimeUnit.SECONDS));
         // {file, language, character, voice, tone, text}
         String[][] cases={
-            {"en-sweet-girl-ai-happy","en-US","sweet_girl","","happy","Hi! I'm Milo. Let's have a lovely day together!"},
+            {"en-sweet-girl-ai-happy","en-US","sweet_girl","ai:kokoro:af_heart","happy","Hi! I'm Milo. Let's have a lovely day together!"},
             {"en-sweet-girl-phone-happy","en-US","sweet_girl","phone:","happy","Hi! I'm Milo. Let's have a lovely day together!"},
-            {"en-cartoon-fairy-ai-excited","en-US","cartoon_fairy","","excited","Guess what? That's amazing news!"},
-            {"en-tiny-pixie-ai-playful","en-US","tiny_pixie","","playful","Catch me if you can!"},
-            {"en-sweet-girl-ai-angry","en-US","sweet_girl","","angry","That is so unfair!"},
-            {"en-sweet-girl-ai-sad","en-US","sweet_girl","","sad","I'm sorry. That sounds really hard."},
-            {"en-sweet-girl-ai-sleepy","en-US","sweet_girl","","sleepy","I'm getting sleepy. Good night."},
-            {"en-robot-buddy-ai-happy","en-US","robot_buddy","","happy","Beep boop! Robot Milo is ready to help."},
+            {"en-cartoon-fairy-ai-excited","en-US","cartoon_fairy","ai:kokoro:af_bella","excited","Guess what? That's amazing news!"},
+            {"en-tiny-pixie-ai-playful","en-US","tiny_pixie","ai:kokoro:af_nicole","playful","Catch me if you can!"},
+            {"en-sweet-girl-ai-angry","en-US","sweet_girl","ai:kokoro:af_heart","angry","That is so unfair!"},
+            {"en-sweet-girl-ai-sad","en-US","sweet_girl","ai:kokoro:af_heart","sad","I'm sorry. That sounds really hard."},
+            {"en-sweet-girl-ai-sleepy","en-US","sweet_girl","ai:kokoro:af_heart","sleepy","I'm getting sleepy. Good night."},
+            {"en-robot-buddy-ai-happy","en-US","robot_buddy","ai:kokoro:am_michael","happy","Beep boop! Robot Milo is ready to help."},
             {"ml-sweet-girl-ai-happy","ml-IN","sweet_girl","","happy","നിന്നെ കണ്ടതിൽ ഒരുപാട് സന്തോഷം."},
             {"ml-sweet-girl-phone-happy","ml-IN","sweet_girl","phone:","happy","നിന്നെ കണ്ടതിൽ ഒരുപാട് സന്തോഷം."},
             {"ml-sweet-girl-ai-angry","ml-IN","sweet_girl","","angry","ഇത് ഒട്ടും ശരിയല്ല!"},

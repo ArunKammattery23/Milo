@@ -282,7 +282,7 @@ public class MainActivity extends Activity {
         emotions.setOnClickListener(v->{saveVoice.run();speech.stop();speech.refresh(()->{voiceReady=speech.ready();if(!voiceReady)return;for(String[] sample:MiloVoice.SAMPLES){speech.beginReply();speech.speak(lang.equals("ml")?sample[2]:sample[1],sample[0],"milo-test-"+sample[0]);}});});
         form.addView(text("The character sets Milo's voice. Each emotion changes her pitch, speed and loudness and adds a little sound. Angry is only for playful pretend games or unfair situations, never at you.",13));
         form.addView(text("On-phone AI voices",17));
-        form.addView(text("Natural voices that run offline on this phone. English: Kokoro (132 MB). Malayalam: Meera (67 MB). Downloads use Wi-Fi only; choose them above under Voice after installing.",13));
+        form.addView(text("Natural voices that run offline on this phone. Malayalam: Meera (67 MB), fast enough for live talk and used automatically for girl characters. English: Kokoro (132 MB), the most natural but slower than live speech on this phone, so choose it under Voice if you prefer quality over speed. Downloads use Wi-Fi only; choose them above under Voice after installing.",13));
         for(String kind:new String[]{NeuralVoices.KOKORO,NeuralVoices.MEERA}){
             String aiName=kind.equals(NeuralVoices.KOKORO)?"Kokoro English voices":"Meera Malayalam voice";TextView aiState=text("",14);form.addView(aiState);Button aiButton=button("",false);form.addView(aiButton);
             Runnable[] aiRefresh={null};aiRefresh[0]=()->{if(destroyed)return;

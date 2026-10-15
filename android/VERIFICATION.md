@@ -1,5 +1,13 @@
 # Prototype verification — latest: 15 October 2026
 
+## Milo 2.5 — voice studio, on-phone AI voices, full-length stories
+
+- Version code 19. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed; **all 24 smoke tests passed on the Galaxy S23 Ultra** and Milo settings were byte-identical before and after.
+- Voice studio: seven characters (Sweet Girl default), emotion voices (pitch, speed, loudness, a little sound such as "ഹായ്!" or "അയ്യോ!"), lip sync from the audio Milo plays itself, per-sentence tones, and an Angry expression and harsh voice that the model may use only for pretend play or unfair situations, never at the user. Milo measures each phone voice's pitch to choose a girl or boy voice (on the S23: en-us-x-iog 218 Hz, sfg 216 Hz; ml-in-x-mlc 197 Hz, mle 192 Hz).
+- On-phone AI voices through sherpa-onnx 1.13.8 (AAR fetched at build time, SHA-256 checked): Piper Meera (Malayalam) renders about 3 s of speech in 0.3 s and is used automatically for girl characters in Malayalam; Kokoro int8 (English) sounds most natural but renders 1.5–2x slower than real time on the S23 with 2–8 threads or XNNPACK, so it is opt-in only. Voices are unpacked by Milo into private internal storage; files pushed over USB into the app's external folder could not be read reliably by the speech engine.
+- Stories and pep talks are no longer cut to three sentences: on the S23 Gemma 4 told a 346-word bedtime story and a 152-word motivational talk; casual chat stays short.
+- The Home view has the Angry expression too.
+
 ## Milo 2.3 — fairy app icon
 
 - Version code 17. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed. **All 23 smoke tests passed on the Galaxy S23 Ultra**; Milo settings were byte-identical before and after.

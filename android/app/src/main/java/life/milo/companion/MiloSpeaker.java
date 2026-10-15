@@ -56,9 +56,9 @@ final class MiloSpeaker {
         if(want.startsWith("ai:kokoro")&&!ml&&NeuralVoices.installed(app,NeuralVoices.KOKORO))chosen=want;
         else if(want.equals("ai:meera")&&ml&&NeuralVoices.installed(app,NeuralVoices.MEERA))chosen=want;
         else if(want.isEmpty()){
-            // Automatic: the AI voice that suits the character, else the phone voice closest to its gender.
-            if(!ml&&"en".equals(locale.getLanguage())&&NeuralVoices.installed(app,NeuralVoices.KOKORO))chosen="ai:kokoro:"+ch.aiVoice;
-            else if(ml&&"f".equals(ch.gender)&&NeuralVoices.installed(app,NeuralVoices.MEERA))chosen="ai:meera";
+            // Automatic picks only voices fast enough for live talk: Meera for Malayalam girl characters, else the phone voice
+            // closest to the character's gender. Kokoro (about 1.6x slower than real time on a Galaxy S23) is opt-in.
+            if(ml&&"f".equals(ch.gender)&&NeuralVoices.installed(app,NeuralVoices.MEERA))chosen="ai:meera";
         }
         if(chosen.startsWith("ai:")&&NeuralVoices.engine(app,chosen.startsWith("ai:kokoro")?NeuralVoices.KOKORO:NeuralVoices.MEERA)==null)chosen="phone";
         if(chosen.equals("phone")&&phoneLang){
