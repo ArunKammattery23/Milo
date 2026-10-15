@@ -181,9 +181,11 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
     public void testWrittenActionsAreRunAndHidden(){
         android.content.Context c=getInstrumentation().getTargetContext();
         assertEquals("All set!",MiloAgent.hideCalls("set_reminder{task:<|\"|>drink water<|\"|>,time:<|\"|>in 20 minutes<|\"|>}All set!"));
-        assertEquals("",MiloAgent.hideCalls("open_app YouTube"));assertEquals("Okay.",MiloAgent.hideCalls("Okay. phone_status()"));assertEquals("I love apps!",MiloAgent.hideCalls("I love apps!"));
+        assertEquals("",MiloAgent.hideCalls("open_app YouTube"));
+        assertEquals("It is currently It's 9:51 PM, Thursday.",MiloAgent.hideCalls(ToneTag.visible("[calm] It is currently [phone_status] [happy] It's 9:51 PM, Thursday.")));assertEquals("Okay.",MiloAgent.hideCalls("Okay. phone_status()"));assertEquals("I love apps!",MiloAgent.hideCalls("I love apps!"));
         assertEquals("set_reminder",MiloAgent.intent("Please remind me at 1 pm to go to the office"));assertEquals("set_reminder",MiloAgent.intent("വൈകുന്നേരം 6 മണിക്ക് എന്നെ ഓർമ്മിപ്പിക്കണം"));
         assertEquals("open_app",MiloAgent.intent("Open YouTube"));assertEquals("list_reminders",MiloAgent.intent("What reminders do I have?"));assertEquals("cancel_reminder",MiloAgent.intent("Cancel my office reminder"));
+        assertEquals("phone_status",MiloAgent.intent("What time is it now?"));assertEquals("phone_status",MiloAgent.intent("ഇപ്പോൾ സമയം എത്രയായി?"));
         assertNull(MiloAgent.intent("I feel lonely today"));assertNull(MiloAgent.intent("Tell me a story about an alarming dragon"));
         java.util.Set<Integer> before=new java.util.HashSet<>();for(org.json.JSONObject t:MiloTasks.upcoming(c))before.add(t.optInt("id"));
         try{
@@ -191,7 +193,19 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
             assertEquals(r.toString(),1,r.size());assertTrue(MiloAgent.called("set_reminder"));
             org.json.JSONObject made=null;for(org.json.JSONObject t:MiloTasks.upcoming(c))if(!before.contains(t.optInt("id")))made=t;
             assertNotNull(made);assertEquals("drink water",made.optString("task"));assertTrue(Math.abs(made.optLong("when")-System.currentTimeMillis()-1_200_000)<60_000);
+            String en=MiloAgent.confirm(c,r,false);assertTrue(en,en.startsWith("Done! I'll remind you to drink water at ")&&en.contains("today")&&en.endsWith(", and 5 minutes before."));
             r=MiloAgent.runWritten(c,"set_reminder(task='അമ്മയെ വിളിക്കാൻ', time='6 pm')");assertTrue(r.toString(),r.get(0).contains("Saved: 'അമ്മയെ വിളിക്കാൻ' at 6 PM"));
+            String ml=MiloAgent.confirm(c,r,true);assertTrue(ml,ml.matches("ശരി! (ഇന്ന്|നാളെ) വൈകുന്നേരം 6 മണിക്ക് അമ്മയെ വിളിക്കാൻ ഞാൻ ഓർമ്മിപ്പിക്കാം\\."));
+            assertEquals("Opening YouTube!",MiloAgent.confirm(c,java.util.Collections.singletonList("open_app: Opened YouTube."),false));
+            // Clear requests Milo reads herself.
+            assertEquals("go to the office",MiloAgent.reminderTask("Remind me at 1 pm to go to the office.",false));assertEquals("drink water",MiloAgent.reminderTask("Set a reminder in 20 minutes to drink water.",false));
+            assertEquals("call mom",MiloAgent.reminderTask("Please remind me to call mom tomorrow at 9 am",false));
+            assertEquals("അമ്മയെ വിളിക്കാൻ",MiloAgent.reminderTask("വൈകുന്നേരം 7 മണിക്ക് അമ്മയെ വിളിക്കാൻ എന്നെ ഓർമ്മിപ്പിക്കണം.",true));
+            assertEquals("7:00 pm",MiloAgent.malayalamTime("വൈകുന്നേരം 7 മണിക്ക് അമ്മയെ വിളിക്കാൻ"));assertEquals("tomorrow 9:00 am",MiloAgent.malayalamTime("നാളെ രാവിലെ ഒമ്പത് മണിക്ക് ഓഫീസിൽ പോകണം"));
+            assertEquals("in 20 minutes",MiloAgent.malayalamTime("20 മിനിറ്റ് കഴിഞ്ഞ് വെള്ളം കുടിക്കാൻ"));assertEquals("1:00 pm",MiloAgent.malayalamTime("ഉച്ചയ്ക്ക് ഒരു മണിക്ക് ഊണ് കഴിക്കണം"));assertNull(MiloAgent.malayalamTime("എനിക്ക് ഒറ്റയ്ക്കാണ്"));
+            assertEquals("YouTube",MiloAgent.appName("Open YouTube."));assertEquals("whatsapp",MiloAgent.appName("can you open whatsapp please"));assertEquals("YouTube",MiloAgent.appName("യൂട്യൂബ് ഒന്ന് തുറക്കൂ"));
+            long at5=MiloTasks.parseWhen("call 2 friends at 5 pm",at(2026,10,15,12,10));assertEquals("17:00",new java.text.SimpleDateFormat("HH:mm",java.util.Locale.US).format(new java.util.Date(at5)));
+            assertTrue(MiloAgent.confirm(c,java.util.Collections.singletonList("phone_status: Now: x"),true).startsWith("ഇപ്പോൾ സമയം "));
         }finally{for(org.json.JSONObject t:MiloTasks.upcoming(c))if(!before.contains(t.optInt("id")))MiloTasks.remove(c,t.optInt("id"));}
     }
     /** At the time, the floating pet appears, says the user's name and the task, and a notification offers Done and Snooze. */
@@ -315,7 +329,10 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
             String sound=MiloVoice.interjection(k[4],lang.equals("ml"));long t0=android.os.SystemClock.elapsedRealtime();
             MiloSpeaker.Clip lead=sound==null?null:sp[0].clip(sound,k[4],"t-lead"),main=sp[0].clip(k[5],k[4],"t-main");long ms=android.os.SystemClock.elapsedRealtime()-t0;
             assertNotNull(k[0]+": nothing rendered",main);assertTrue(k[0]+": too short",main.pcm.length>main.rate/3);
-            if(k[0].contains("-ai-"))assertTrue(k[0]+" should use an AI voice, used "+sp[0].engine(),sp[0].engine().startsWith("ai:"));
+            // AI voices are optional downloads: check them only on a phone that has that voice.
+            boolean aiThere=NeuralVoices.installed(getInstrumentation().getTargetContext(),k[3].startsWith("ai:kokoro")?NeuralVoices.KOKORO:NeuralVoices.MEERA);
+            if(k[0].contains("-ai-")&&aiThere)assertTrue(k[0]+" should use an AI voice, used "+sp[0].engine(),sp[0].engine().startsWith("ai:"));
+            else if(k[0].contains("-ai-"))android.util.Log.i("MiloVoiceTest",k[0]+": AI voice not installed on this phone, phone voice used");
             if(k[0].contains("-phone-"))assertEquals("phone",sp[0].engine());
             short[] all=new short[(lead==null?0:lead.pcm.length+lead.rate/8)+main.pcm.length];if(lead!=null)System.arraycopy(lead.pcm,0,all,0,lead.pcm.length);System.arraycopy(main.pcm,0,all,all.length-main.pcm.length,main.pcm.length);
             writeWav(new java.io.File(out,k[0]+".wav"),all,Math.round(main.rate*main.playback));

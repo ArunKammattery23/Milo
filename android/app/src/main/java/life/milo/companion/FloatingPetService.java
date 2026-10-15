@@ -78,7 +78,9 @@ public final class FloatingPetService extends Service implements RecognitionList
             windows.addView(target,targetLayout);windows.addView(bubble,bubbleLayout);windows.addView(face,layout);
             visible=true;current=this;prefs.registerOnSharedPreferenceChangeListener(prefsChanged);ensureVoice();
             // Loading Gemma 4 onto the GPU takes ~12 s; do it now so the first tap gets a quick reply.
-            if(AiProvider.current(this) instanceof LiteRtLocalAi)worker.execute(()->LiteRtLocalAi.warm(this));
+            // Also read Milo's instructions now (15–20 s on a mid-range phone), so the first tap is answered quickly.
+            if(AiProvider.current(this) instanceof LiteRtLocalAi){String n=name(),l=language(),p=prefs.getString("practice_language",""),s=prefs.getString("companion_style","Gentle"),ctx=voiceContext();
+                worker.execute(()->LiteRtLocalAi.prepare(this,n,l,p,s,ctx,new ArrayList<>()));}
             if("TALK".equals(action))startConversation();
             else if("REMIND".equals(action))remind(intent.getStringExtra("text"),intent.getStringExtra("tone"));
         }catch(Exception e){Log.w(TAG,"overlay failed: "+e);stopSelf();android.widget.Toast.makeText(this,"Android could not show the floating pet. Check display-over-other-apps permission.",android.widget.Toast.LENGTH_LONG).show();}
@@ -255,6 +257,8 @@ public final class FloatingPetService extends Service implements RecognitionList
             try{
                 MainActivity.GeminiReply r=provider.chat(key,name,language,prefs.getString("practice_language",""),prefs.getString("companion_style","Gentle"),prompt,past,context,false,partial->ui.post(()->{
                     if(id!=turn||mode==Mode.IDLE)return;if(showWords())setBubble(name+": "+partial);
+                    // The emotion tag comes first, so the little sound can play before the first sentence is ready.
+                    if(spoken==0&&mode==Mode.THINKING&&ttsReady&&speech!=null&&ToneTag.live!=null){mode=Mode.SPEAKING;face.setExpression(ToneTag.live);speech.lead(ToneTag.live);}
                     int end=MainActivity.sentenceBoundary(partial,spoken);if(end>spoken){speak(partial.substring(spoken,end),"chunk"+id,ToneTag.toneAt(spoken));spoken=end;}
                 }));
                 ui.post(()->{

@@ -47,7 +47,34 @@ final class MiloSpeaker {
     TextToSpeech phone(){return tts;}
 
     /** Re-reads language, character and voice; runs after any queued speech. */
-    void refresh(Runnable after){run(render,()->{configure();if(after!=null)ui.post(after);});}
+    void refresh(Runnable after){run(render,()->{configure();if(after!=null)ui.post(after);});run(render,this::prewarm);}
+
+    /* Little sounds ("Hehe!", "ഓഹോ?") are rendered once per voice and kept, so a reply can start with one instantly. */
+    private final Map<String,Clip> sounds=new ConcurrentHashMap<>();
+    private String soundKey(String tone,String sound){Locale l=MiloVoice.locale(prefs);return engine+"|"+l+"|"+prefs.getString("voice_name_"+l.getLanguage(),"")+"|"+MiloVoice.character(prefs).id+"|"+prefs.getInt("voice_emotion",100)+"|"+tone+"|"+sound;}
+    private Clip sound(String tone,String sound,String id){
+        String key=soundKey(tone,sound);Clip c=sounds.get(key);if(c!=null)return c;
+        c=clip(sound,tone,id);if(c!=null)sounds.put(key,c);return c;
+    }
+    /** After the voice is chosen: renders the common little sounds while idle, which also warms up the voice so the first sentence renders faster. */
+    private void prewarm(){
+        if(!ready||human()||!prefs.getBoolean("voice_sounds",true))return;boolean ml=MiloVoice.malayalam(prefs);
+        for(String tone:new String[]{"happy","curious","comfort","excited","sad","playful","calm","celebrate"}){
+            if(closed||pending.get()>0)return; // a reply is waiting: never delay it
+            String s=MiloVoice.interjection(tone,ml);if(s!=null)sound(tone,s,"warm");
+        }
+    }
+    /** Plays the reply's little sound now, as soon as its emotion is known and before the first sentence is ready. */
+    void lead(String tone){
+        if(!leadNext||human())return;
+        String s=prefs.getBoolean("voice_sounds",true)?MiloVoice.interjection(tone,MiloVoice.malayalam(prefs)):null;if(s==null)return;
+        leadNext=false;int gen=generation.get();pending.incrementAndGet();
+        run(render,()->{
+            if(gen!=generation.get()||closed){pending.decrementAndGet();return;}
+            Clip c=sound(tone,s,"lead");
+            run(play,()->{try{if(c!=null&&gen==generation.get()&&!closed)playClip(c,gen,"lead",tone);}finally{finish("lead",gen);}});
+        });
+    }
 
     private void configure(){
         Locale locale=MiloVoice.locale(prefs);MiloVoice.Character ch=MiloVoice.character(prefs);boolean ml="ml".equals(locale.getLanguage());
@@ -114,18 +141,20 @@ final class MiloSpeaker {
         int gen=generation.get();boolean lead=leadNext;leadNext=false;pending.incrementAndGet();
         run(render,()->{
             if(gen!=generation.get()||closed){pending.decrementAndGet();return;}
-            List<Clip> clips=new ArrayList<>();
             String sound=lead&&prefs.getBoolean("voice_sounds",true)?MiloVoice.interjection(tone,MiloVoice.malayalam(prefs)):null;
             Clip main;
             if(sound!=null&&human()){main=clip(sound+" "+text,tone,id);}
-            else{if(sound!=null){Clip s=clip(sound,tone,id+"·lead");if(s!=null)clips.add(s);}main=clip(text,tone,id);}
-            if(main!=null)clips.add(main);
-            run(play,()->{try{for(Clip c:clips){if(gen!=generation.get()||closed)break;playClip(c,gen,id,tone);}}finally{finish(id,gen);}});
+            else{
+                // The little sound starts playing while the sentence is still being rendered.
+                if(sound!=null){Clip s=sound(tone,sound,id+"·lead");if(s!=null)run(play,()->{if(gen==generation.get()&&!closed)playClip(s,gen,id+"·lead",tone);});}
+                main=clip(text,tone,id);
+            }
+            run(play,()->{try{if(main!=null&&gen==generation.get()&&!closed)playClip(main,gen,id,tone);}finally{finish(id,gen);}});
         });
     }
     /** Reports id once everything queued before it has been spoken. */
     void mark(String id){flushBatch();int gen=generation.get();pending.incrementAndGet();run(render,()->run(play,()->finish(id,gen)));}
-    private void finish(String id,int gen){if(pending.decrementAndGet()<=0)releaseFocus();if(gen==generation.get()&&!closed)ui.post(()->{listener.onLevel(0);listener.onDone(id);});}
+    private void finish(String id,int gen){if(pending.decrementAndGet()<=0)releaseFocus();if(gen==generation.get()&&!closed)ui.post(()->{if(gen!=generation.get()||closed)return;listener.onLevel(0);listener.onDone(id);});}
 
     /** Stops speaking now and drops anything queued. */
     void stop(){
@@ -133,7 +162,8 @@ final class MiloSpeaker {
         try{tts.stop();}catch(RuntimeException ignored){}
         for(CountDownLatch l:synthesis.values())l.countDown();
         AudioTrack t=track;if(t!=null)try{t.pause();t.flush();}catch(IllegalStateException ignored){}
-        ui.post(()->listener.onLevel(0));
+        int stoppedGeneration=generation.get();
+        ui.post(()->{if(stoppedGeneration==generation.get()&&!closed)listener.onLevel(0);});
     }
     void shutdown(){closed=true;stop();render.shutdownNow();play.shutdownNow();try{tts.shutdown();}catch(RuntimeException ignored){}AudioTrack t=track;if(t!=null)try{t.release();}catch(RuntimeException ignored){}releaseFocus();}
 

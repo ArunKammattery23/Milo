@@ -84,7 +84,7 @@ final class MiloTasks {
     static String time(Context c,long when,boolean malayalam){
         Calendar k=Calendar.getInstance();k.setTimeInMillis(when);int h=k.get(Calendar.HOUR_OF_DAY),m=k.get(Calendar.MINUTE);
         if(!malayalam)return new SimpleDateFormat(m==0?"h a":"h:mm a",Locale.US).format(new Date(when));
-        String part=h<5?"രാത്രി":h<12?"രാവിലെ":h<15?"ഉച്ചയ്ക്ക്":h<19?"വൈകുന്നേരം":"രാത്രി";int h12=h%12==0?12:h%12;
+        String part=h<5?"രാത്രി":h<12?"രാവിലെ":h<15?"ഉച്ചയ്ക്ക്":h<20?"വൈകുന്നേരം":"രാത്രി";int h12=h%12==0?12:h%12;
         return part+" "+h12+(m==0?" മണിക്ക്":":"+String.format(Locale.US,"%02d",m)+"ന്");
     }
     /** "today", "tomorrow" or the date, for confirming a new task. */
@@ -147,7 +147,13 @@ final class MiloTasks {
         int weekday=-1;for(int d=0;d<7;d++)if(s.contains(DAYS[d])){weekday=d;dayGiven=true;}
         int hour=-1,minute=0;Boolean pm=null;
         if(s.contains("noon")){hour=12;pm=true;}else if(s.contains("midnight")){hour=0;pm=false;}
-        else{Matcher m=CLOCK.matcher(s);while(m.find()){int h=Integer.parseInt(m.group(1));if(h>23)continue;hour=h;minute=m.group(2)==null?0:Integer.parseInt(m.group(2));String ap=m.group(3);if(ap!=null&&ap.startsWith("a"))pm=false;else if(ap!=null&&ap.startsWith("p"))pm=true;break;}}
+        else{
+            // In a whole sentence ("call 2 friends at 5 pm") the time is the number with am/pm, else the one after "at", else the first.
+            Matcher m=CLOCK.matcher(s);int best=0;
+            while(m.find()){int h=Integer.parseInt(m.group(1));if(h>23)continue;String ap=m.group(3);
+                int score=ap!=null?3:s.substring(Math.max(0,m.start(1)-4),m.start(1)).matches(".*\\bat\\s*")?2:1;
+                if(score<=best)continue;best=score;hour=h;minute=m.group(2)==null?0:Integer.parseInt(m.group(2));pm=ap==null||ap.startsWith("o")?null:ap.startsWith("a")?Boolean.FALSE:Boolean.TRUE;}
+        }
         if(hour<0){if(s.contains("morning")){hour=9;}else if(s.contains("afternoon")){hour=14;}else if(s.contains("evening")){hour=18;}else if(s.contains("night")||s.contains("tonight")){hour=21;}else return -1;}
         if(pm==null){if(s.contains("morning"))pm=false;else if(s.contains("afternoon")||s.contains("evening")||s.contains("night"))pm=true;}
         if(pm!=null&&hour<=12){if(pm&&hour<12)hour+=12;if(!pm&&hour==12)hour=0;}

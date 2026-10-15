@@ -160,6 +160,7 @@ public class MainActivity extends Activity {
                 if(pending.getParent()!=null)pending.setText(petName()+"\n"+partial);
                 status.setText("Reply arriving…");
                 if(canSpeak(id)){
+                    if(spoken[0]==0&&ToneTag.live!=null)speech.lead(ToneTag.live);
                     int end=sentenceBoundary(partial,spoken[0]);
                     if(end>spoken[0]){speakReply(partial.substring(spoken[0],end),"milo-chunk",ToneTag.toneAt(spoken[0]));spoken[0]=end;}
                 }
@@ -183,7 +184,7 @@ public class MainActivity extends Activity {
     boolean canSpeak(int id){return prefs.getBoolean("pet_enabled",true)&&mutedRequest!=id&&foreground&&prefs.getBoolean("speak",true)&&voiceReady&&tab.equals("Talk");}
     static String cleanSpeech(String text){return text.replaceAll("[*#`]", "").trim();}
     /** End of the next speakable piece: speak even a short first sentence at once, split long ones at a comma. */
-    static int sentenceBoundary(String s,int start){for(int i=start;i<s.length();i++){char ch=s.charAt(i);if(".!?。！？।\n".indexOf(ch)>=0&&i-start>=4)return i+1;if(",;:".indexOf(ch)>=0&&i-start>=70)return i+1;}return s.length()-start>=180?s.length():start;}
+    static int sentenceBoundary(String s,int start){return SpeechChunks.boundary(s,start);}
     GeminiReply request(String key,String prompt,List<JSONObject> history,String context,boolean useSearch,java.util.function.Consumer<String> partial)throws Exception{
         return GeminiClient.request(key,petName(),voiceLocale().getDisplayLanguage(Locale.ENGLISH),prefs.getString("practice_language",""),prefs.getString("companion_style","Gentle"),prompt,history,context,useSearch,partial);
     }

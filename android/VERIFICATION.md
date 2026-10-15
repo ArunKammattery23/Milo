@@ -1,5 +1,17 @@
 # Prototype verification — latest: 15 October 2026
 
+## Milo 2.10 — faster replies and instant actions
+
+- Version code 24. Tested on a Galaxy A53 (Exynos 1280, 8 GB); the S23 Ultra was not connected for this round.
+- The on-phone model now gets short instructions (1,460 instead of 5,391 characters). Reading them when a conversation starts went from 15–16 s to 0.3–1.8 s on the A53. Cloud AIs keep the full instructions. Stories and pep talks keep their full length (story 233 words, pep talk 86 words in the device test).
+- The floating pet reads the instructions as soon as it appears, so the first tap is answered without that wait.
+- Clear requests are carried out by Milo before the model runs and confirmed in her own words with the exact time and day: reminders (English and Malayalam times such as "വൈകുന്നേരം 7 മണിക്ക്", "നാളെ രാവിലെ 9 മണിക്ക്", "20 മിനിറ്റ് കഴിഞ്ഞ്"), opening an app by name (also Malayalam names such as യൂട്യൂബ്), listing reminders, and the time or battery. Measured: 2–100 ms (opening an app 2–3 s) instead of 3–18 s. Anything unclear still goes to the model; calls it writes as text are run and hidden, and a missed call gets one follow-up.
+- Little sounds before a reply are rendered once per voice and kept, play as soon as the reply's emotion tag arrives, and no longer wait for the first sentence to render.
+- Asking for something ("ഒരു ചെറിയ നല്ല ശീലം പറഞ്ഞു തരാമോ") now gets an answer instead of a question back.
+- From Codex's work on this branch: the GPU fallback guard counts only crashes confirmed by Android's exit records; speaker callbacks ignore stale generations; SpeechChunks never speaks half a word, a time like "1.30" or "Dr." as a sentence end.
+- Small-model study for a future Milo-only model (same 10 personal-assistant tests on the A53): Gemma 4 E2B with short instructions 10/10; Gemma 3 1B 5/10 with unusable Malayalam; Qwen3 0.6B 7/10, broken Malayalam; Qwen3.5 0.8B loaded in 9 minutes and missed every action; FunctionGemma 270M answered in 0.2 s on the CPU but only knows its own built-in actions. Plan: fine-tune FunctionGemma for Milo's actions and keep Gemma 4 E2B for conversation.
+- Device suite on the A53: 30 tests; after the length and optional-voice fixes, every test passed.
+
 ## Milo 2.9 — a small agent: reminders by voice, apps, and a smarter model choice
 
 - Version code 23. Milo now acts on the phone through Gemma 4's own tool calling (LiteRT-LM `OpenApiTool`): set_reminder, list_reminders, cancel_reminder, open_app, phone_status and remember_name. Everything runs on the phone; she cannot read messages, contacts, photos or the screen, or call or text anyone.

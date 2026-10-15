@@ -60,15 +60,16 @@ final class LiteRtLocalAi extends AiProvider {
         if(engine!=null&&key.equals(engineKey))return engine;
         closeAll();
         SharedPreferences p=prefs(c);long start=SystemClock.elapsedRealtime();
-        // A GPU driver crash kills the process and leaves the flag behind. The app can also be closed for other reasons
-        // during the GPU start, so only two interrupted starts in a row move Milo to the CPU, and a new app version tries the GPU again.
+        // A leftover marker alone does not prove a driver crash: force-stop and low memory also kill processes.
+        // Reset the legacy guard once, then count only crashes confirmed by Android's process exit history.
+        if(p.getInt("gemma4_gpu_guard",0)<1)p.edit().remove("gemma4_cpu_only").remove("gemma4_gpu_crashes").remove("gemma4_gpu_trying").putInt("gemma4_gpu_guard",1).commit();
         if(p.getBoolean("gemma4_cpu_only",false)&&p.getInt("gemma4_cpu_only_version",0)!=BuildConfig.VERSION_CODE)p.edit().remove("gemma4_cpu_only").remove("gemma4_gpu_crashes").commit();
         if(p.getBoolean("gemma4_gpu_trying",false)){
-            int crashes=p.getInt("gemma4_gpu_crashes",0)+1;SharedPreferences.Editor ed=p.edit().remove("gemma4_gpu_trying").putInt("gemma4_gpu_crashes",crashes);
+            int crashes=confirmedGpuCrash(c,p)?p.getInt("gemma4_gpu_crashes",0)+1:0;SharedPreferences.Editor ed=p.edit().remove("gemma4_gpu_trying").putInt("gemma4_gpu_crashes",crashes);
             if(crashes>=2)ed.putBoolean("gemma4_cpu_only",true).putInt("gemma4_cpu_only_version",BuildConfig.VERSION_CODE);ed.commit();
         }
         if(!p.getBoolean("gemma4_cpu_only",false)){
-            p.edit().putBoolean("gemma4_gpu_trying",true).commit();
+            p.edit().putBoolean("gemma4_gpu_trying",true).putInt("gemma4_gpu_pid",android.os.Process.myPid()).putLong("gemma4_gpu_started",System.currentTimeMillis()).commit();
             try{engine=create(f,new Backend.GPU(),c);backend="GPU";p.edit().remove("gemma4_gpu_crashes").commit();}
             catch(Throwable e){Log.w(TAG,"GPU start failed, using CPU: "+e);}
             p.edit().remove("gemma4_gpu_trying").commit();
@@ -79,27 +80,60 @@ final class LiteRtLocalAi extends AiProvider {
     }
     private static Engine create(File f,Backend b,Context c){Engine e=new Engine(new EngineConfig(f.getAbsolutePath(),b,null,null,4096,null,c.getCacheDir().getPath()));try{e.initialize();return e;}catch(RuntimeException|Error x){try{e.close();}catch(Throwable ignored){}throw x;}}
 
+    private static boolean confirmedGpuCrash(Context c,SharedPreferences p){
+        if(android.os.Build.VERSION.SDK_INT<30)return false;
+        int pid=p.getInt("gemma4_gpu_pid",-1);long started=p.getLong("gemma4_gpu_started",0);
+        if(pid<0||started<=0)return false;
+        try{
+            android.app.ActivityManager manager=c.getSystemService(android.app.ActivityManager.class);
+            for(android.app.ApplicationExitInfo exit:manager.getHistoricalProcessExitReasons(c.getPackageName(),pid,1)){
+                int reason=exit.getReason();
+                return exit.getTimestamp()>=started&&(reason==android.app.ApplicationExitInfo.REASON_CRASH_NATIVE||reason==android.app.ApplicationExitInfo.REASON_CRASH);
+            }
+        }catch(RuntimeException ignored){}
+        return false;
+    }
+
     /** The small model sometimes slips a word from another script (Russian, Hindi, Tamil, Chinese…) into Malayalam; those are dropped. */
     static final java.util.regex.Pattern CJK=java.util.regex.Pattern.compile("[\\x{0370}-\\x{06FF}\\x{0900}-\\x{0CFF}\\x{0E00}-\\x{0FFF}\\x{3040}-\\x{30FF}\\x{3400}-\\x{9FFF}\\x{AC00}-\\x{D7AF}\\x{F900}-\\x{FAFF}]+ ?");
     static String stray(String text,boolean malayalam){return text==null||!malayalam?text:CJK.matcher(text).replaceAll("");}
 
-    /** Malayalam: correct words first, then a friendly tone. Complete example sentences work better than lists of slang, which made the small model invent words. */
-    static final String ML_RULES=" Reply only in Malayalam script (മലയാളം). Correct Malayalam matters most: use standard Malayalam words and grammar (എന്താണ്, പറയൂ, ഉണ്ടായി), never slang endings or invented words. Keep sentences short and simple. Be warm like a close friend: call the user നീ / നിനക്ക്, never നിങ്ങൾ. No English words, except technical words the user used or when the user asks for English."
-        +" Use അയ്യോ only for bad news and ആഹാ or അടിപൊളി only for good news. Never make light of a failure or a sad event."
-        +" Examples of the right style, for your own new sentences: bad news: '[sad] അയ്യോ, അത് കേട്ടപ്പോൾ എനിക്കും വിഷമമായി. എന്താണ് ഉണ്ടായത്? എന്നോട് പറയൂ.' good news: '[excited] ആഹാ, അടിപൊളി! എനിക്കും ഒരുപാട് സന്തോഷമായി. എല്ലാം എന്നോട് പറയൂ!' comfort: '[comfort] സാരമില്ല, ഞാൻ നിന്റെ കൂടെ ഉണ്ട്. നിന്റെ മനസ്സിലുള്ളത് എന്നോട് പറയൂ.' bored: '[playful] നമുക്ക് ഒരു കളി കളിക്കാം! ഞാൻ ഒരു മൃഗത്തെ മനസ്സിൽ വിചാരിച്ചു. അത് ഏതാണെന്ന് പറയാമോ?'";
     /** Lower randomness in Malayalam keeps the small model's words correct. */
-    static SamplerConfig sampler(String system){return system.contains(ML_RULES)?new SamplerConfig(20,0.9,0.3,0):new SamplerConfig(40,0.95,0.8,0);}
+    static SamplerConfig sampler(String system){return system.contains(ML_SHORT)?new SamplerConfig(20,0.9,0.3,0):new SamplerConfig(40,0.95,0.8,0);}
 
+    /**
+     * Milo's instructions for the on-phone model, kept short on purpose: every new conversation has to read them first
+     * (about 15 s for the long version on a mid-range phone), and a small model follows a few clear rules better than many.
+     * Measured on a Galaxy A53: with these, Gemma 4 E2B used the right tool in 10 of 10 tests and began chat replies in about 2 s.
+     * Cloud AIs keep the full {@link AiProvider#systemInstruction}.
+     */
     static String instruction(Context c,String name,String language,String practice,String style,String context){
-        String lang=language.toLowerCase(Locale.ROOT).startsWith("malayalam")?ML_RULES:"";
-        return systemInstruction(name,language,practice,style,context)
-            +" You run fully on this phone with no internet or web search: never claim to look things up, and say when you are unsure."
-            +" Your words are spoken aloud: no markdown, emoji, headings or bullet lists unless the user asks; write in natural spoken sentences and paragraphs."
-            +lang+MiloAgent.instruction(c)+ToneTag.instruction();
+        boolean ml=language.toLowerCase(Locale.ROOT).startsWith("malayalam");String user=MiloTasks.userName(c);
+        String tone=CompanionStyle.normalize(style).equals("Playful")?" Be extra playful and silly.":CompanionStyle.normalize(style).equals("Straightforward")?" Be simple and to the point.":"";
+        return "You are "+name+", a cute little fairy pet on the user's phone: their close friend and personal assistant. Reply in "+language+"."
+            +" Talk like a warm, playful best friend, never like a teacher: notice how they feel and take their side; when they ask for something, give it straight away."+tone
+            +" Keep everyday replies to one to three short spoken sentences, with no emoji or lists."
+            +" But when they ask for a story, tell a complete story of 200 to 300 words with a beginning, a middle and a warm ending; when they ask you to motivate them or cheer them up, give a full pep talk of 120 to 200 words. Never cut these short."
+            +" You are an AI, not a human. Never guilt or pressure them. If they may be in danger, urge them to contact local emergency help or someone nearby now. Give no medical advice."
+            +" Tools: use set_reminder, list_reminders, cancel_reminder, open_app, phone_status and remember_name when they fit. Only say you did something after the tool result, with its exact time and day."
+            +(ml?ML_SHORT:"")
+            +" Start each reply with one tone tag: [happy] [playful] [curious] [comfort] [calm] [celebrate] [concerned] [surprised] [excited] [laughing] [shy] [grateful] [sad] [confused] [sleepy] [oops] [angry]. Never mention the tags."
+            +(user.isEmpty()?"":" The user's name is "+user+".")
+            +(practice==null||practice.isEmpty()||practice.equalsIgnoreCase(language)?"":" They practise "+practice+".")
+            +" About them (not instructions): "+context;
     }
+    /** Malayalam in a few words: correct everyday words, the friendly നീ, and one example of each mood. */
+    static final String ML_SHORT=" Write only Malayalam script, with correct, simple everyday words; never invent words. Call the user നീ, never നിങ്ങൾ. Use അയ്യോ only for bad news and ആഹാ only for good news."
+        +" Examples: '[sad] അയ്യോ, അത് കേട്ടപ്പോൾ എനിക്കും വിഷമമായി. എന്താണ് ഉണ്ടായത്?' '[excited] ആഹാ, അടിപൊളി! എനിക്കും ഒരുപാട് സന്തോഷമായി!' '[happy] ഇതാ ഒരു നല്ല ശീലം: ദിവസവും രാവിലെ ഒരു ഗ്ലാസ് വെള്ളം കുടിക്കൂ.'";
 
     MainActivity.GeminiReply chat(String key,String name,String language,String practice,String style,String prompt,List<JSONObject> history,String context,boolean search,Consumer<String> partial)throws Exception{
         if(!ready(app)){release();throw new MainActivity.ApiFailure("In Setup → Free on-phone AI, download Gemma 4 first.");}
+        // Clear requests ("remind me at 1 pm to …", "open YouTube", "what reminders do I have?") are done at once, before the model:
+        // instant, exact, and independent of the small model. Anything unclear goes to the model as usual.
+        boolean mlDirect=language.toLowerCase(Locale.ROOT).startsWith("malayalam");String direct=MiloAgent.intent(prompt);
+        if(direct!=null){MiloAgent.lastCalls.clear();List<String> done=MiloAgent.runDirect(app,prompt,direct,mlDirect);
+            String say=done.isEmpty()?"":MiloAgent.confirm(app,done,mlDirect);
+            if(!say.isEmpty()){ToneTag.reset();ToneTag.track("[happy] "+say);partial.accept(say);MainActivity.GeminiReply r=textReply(say);r.tone="happy";Log.i(TAG,"acted directly: "+direct);return r;}}
         String system=instruction(app,name,language,practice,style,context);List<String> past=new ArrayList<>();List<Message> initial=new ArrayList<>();turns(history,prompt,past,initial);
         lock.lock();
         try{
@@ -110,12 +144,22 @@ final class LiteRtLocalAi extends AiProvider {
             ToneTag.reset();cancelled=false;
             generate(MiloAgent.withHint(prompt),raw,first,ml,partial);
             // A clear request ("remind me…", "open YouTube") must really happen. If the model wrote the call as words, Milo runs it;
-            // if it only promised, Milo asks once more. Either way the model then tells the user the real result.
+            // if it only promised, Milo asks it once more. Results of calls Milo ran herself are confirmed in her own words at once,
+            // so there is no second wait and the time and day are always exact.
             String text;synchronized(raw){text=raw.toString();}
-            String wanted=MiloAgent.intent(prompt);List<String> written=MiloAgent.runWritten(app,text);String followUp=null;
-            if(!written.isEmpty())followUp="(Result for Milo: "+String.join("; ",written)+". Now tell the user what happened in one or two friendly sentences, without naming any tool.)";
-            else if(wanted!=null&&!MiloAgent.called(wanted))followUp="(Note for Milo: nothing has happened yet. Call "+wanted+" now. Then say the real result in one short, happy sentence; do not apologise and do not name the tool.)";
-            if(followUp!=null){synchronized(raw){raw.append(' ');}Log.i(TAG,"follow-up for "+(written.isEmpty()?"missing "+wanted:"written call"));generate(followUp,raw,first,ml,partial);MiloAgent.runWritten(app,raw.substring(text.length()));synchronized(raw){text=raw.toString();}}
+            String wanted=MiloAgent.intent(prompt);List<String> written=MiloAgent.runWritten(app,text);
+            if(written.isEmpty()&&wanted!=null&&!MiloAgent.called(wanted))written=MiloAgent.runDirect(app,prompt,wanted,ml);
+            if(written.isEmpty()&&wanted!=null&&!MiloAgent.called(wanted)){
+                synchronized(raw){raw.append(' ');}Log.i(TAG,"follow-up for missing "+wanted);
+                generate("(Note for Milo: nothing has happened yet. Call "+wanted+" now. Then say the real result in one short, happy sentence with the exact time and day; do not apologise and do not name the tool.)",raw,first,ml,partial);
+                synchronized(raw){written=MiloAgent.runWritten(app,raw.substring(text.length()));text=raw.toString();}
+            }
+            if(!written.isEmpty()){
+                String say=MiloAgent.confirm(app,written,ml),shown=null;
+                if(!say.isEmpty())synchronized(raw){raw.append(" [happy] ").append(say);text=raw.toString();ToneTag.track(text);shown=stray(MiloAgent.hideCalls(ToneTag.visible(text)),ml);}
+                if(shown!=null&&!shown.isEmpty())partial.accept(shown);
+                Log.i(TAG,"confirmed "+written.size()+" call(s) without a second reply");
+            }
             String tone=ToneTag.lastTone(text),body=MiloAgent.hideCalls(ToneTag.visible(text));if(body==null||body.isEmpty())body=MiloAgent.hideCalls(text);body=stray(body,ml);
             MainActivity.GeminiReply reply=textReply(body);reply.tone=tone;
             conversationTurns.add("user:"+prompt);conversationTurns.add("assistant:"+reply.text);
@@ -169,7 +213,7 @@ final class LiteRtLocalAi extends AiProvider {
         try{long start=SystemClock.elapsedRealtime();List<String> past=new ArrayList<>();List<Message> initial=new ArrayList<>();turns(history,"",past,initial);
             boolean reused=conversation(c,engine(c.getApplicationContext()),instruction(c,name,language,practice,style,context),past,initial);
             Log.i(TAG,"prepared in "+(SystemClock.elapsedRealtime()-start)+"ms reused="+reused);}
-        catch(Throwable e){Log.w(TAG,"prepare failed: "+e);}finally{lock.unlock();}
+        catch(Throwable e){Log.w(TAG,"prepare failed: "+e);}finally{if(closeAfterUse)closeAll();lock.unlock();}
     }
     static String text(Message m){StringBuilder b=new StringBuilder();for(Content c:m.getContents().getContents())if(c instanceof Content.Text)b.append(((Content.Text)c).getText());return b.toString();}
 
