@@ -12,6 +12,12 @@ final class ToneTag {
     static final Pattern LEADING=Pattern.compile("^\\s*\\[([A-Za-z]{2,12})\\]\\s*");
     static final Pattern ANY=Pattern.compile("\\[("+String.join("|",TONES)+")\\]\\s*",Pattern.CASE_INSENSITIVE);
     static final Pattern PARTIAL=Pattern.compile("\\[[A-Za-z]{0,11}$");
+    /** A tag the model wrote without brackets, such as "excited! Oh wow": a lowercase tone word opening the reply. */
+    static final Pattern BARE=Pattern.compile("^\\s*("+String.join("|",TONES)+")(?![A-Za-z])[!:.,]?\\s*");
+    /** Emoji are never spoken or shown; a following space goes with them. */
+    static final Pattern EMOJI=Pattern.compile("[\\x{1F000}-\\x{1FAFF}\\x{2600}-\\x{27BF}\\x{FE0F}\\x{200D}]+ ?");
+    static String bracket(String text){Matcher m=BARE.matcher(text);return m.find()?"["+m.group(1)+"] "+text.substring(m.end()):text;}
+    private static boolean barePrefix(String s){if(s.isEmpty()||s.length()>10||!s.equals(s.toLowerCase(Locale.ROOT)))return false;for(String t:TONES)if(t.startsWith(s))return true;return false;}
     /** Latest tone seen in a reply that is still streaming. */
     static volatile String live;
     /** Where each tone starts in the visible reply text: {offset, tone index}. */
@@ -29,26 +35,27 @@ final class ToneTag {
 
     /** Text without tone tags; null while a leading tag may still be arriving. A half-written tag at the end is held back. */
     static String visible(String text){
-        String trimmed=text.replaceFirst("^\\s+","");
+        String trimmed=bracket(text.replaceFirst("^\\s+",""));
+        if(barePrefix(trimmed))return null;
         if(trimmed.startsWith("[")&&trimmed.indexOf(']')<0)return trimmed.length()<16?null:trimmed;
         Matcher m=LEADING.matcher(trimmed);
         if(m.find())trimmed=trimmed.substring(m.end());
-        trimmed=ANY.matcher(trimmed).replaceAll("");
+        trimmed=EMOJI.matcher(ANY.matcher(trimmed).replaceAll("")).replaceAll("");
         return PARTIAL.matcher(trimmed).replaceFirst("");
     }
     /** The leading tag's tone if it is one of {@link #TONES}, otherwise null. */
     static String tone(String text){
-        Matcher m=LEADING.matcher(text);
+        Matcher m=LEADING.matcher(bracket(text));
         if(!m.find())return null;String t=m.group(1).toLowerCase(Locale.ROOT);return known(t)?t:null;
     }
     /** The last tone tag in the text, or null. */
-    static String lastTone(String text){String last=null;Matcher m=ANY.matcher(text);while(m.find())last=m.group(1).toLowerCase(Locale.ROOT);return last!=null?last:tone(text);}
+    static String lastTone(String text){text=bracket(text);String last=null;Matcher m=ANY.matcher(text);while(m.find())last=m.group(1).toLowerCase(Locale.ROOT);return last!=null?last:tone(text);}
 
     /** Starts a new streamed reply. */
     static void reset(){live=null;marks.clear();}
     /** Records where each tag starts in the visible text of a streaming reply. */
     static void track(String raw){
-        List<int[]> found=new ArrayList<>();Matcher m=ANY.matcher(raw);
+        raw=bracket(raw);List<int[]> found=new ArrayList<>();Matcher m=ANY.matcher(raw);
         while(m.find()){String before=visible(raw.substring(0,m.start()));found.add(new int[]{before==null?0:before.length(),index(m.group(1).toLowerCase(Locale.ROOT))});}
         synchronized(marks){marks.clear();marks.addAll(found);}
         String t=lastTone(raw);if(t!=null)live=t;

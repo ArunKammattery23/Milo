@@ -179,12 +179,13 @@ public final class FloatingPetService extends Service implements RecognitionList
         ensureVoice();listen();
     }
     void ensureVoice(){
-        if(speech!=null){speech.refresh(()->ttsReady=speech.ready());return;}
+        if(speech!=null){MiloSpeaker s=speech;s.refresh(()->{if(speech==s)ttsReady=s.ready();});return;}
         speech=new MiloSpeaker(this,prefs,new MiloSpeaker.Listener(){
             public void onStart(String id,String tone){if(mode==Mode.SPEAKING&&face!=null){face.setExpression(tone!=null?tone:"speaking");face.setTalking(true);}}
             public void onDone(String id){if(id.equals("final"+turn)){if(face!=null)face.setTalking(false);afterSpeaking();}}
             public void onLevel(float level){if(face!=null&&mode==Mode.SPEAKING)face.setLevel(level);}
-        },()->{ttsReady=speech.ready();if(!ttsReady)Log.w(TAG,"no voice for "+MiloVoice.locale(prefs));});
+        },()->{if(speech==null)return; // the pet was closed while the voice was loading
+            ttsReady=speech.ready();if(!ttsReady)Log.w(TAG,"no voice for "+MiloVoice.locale(prefs));});
     }
     void listen(){
         if(face==null||!talking)return;

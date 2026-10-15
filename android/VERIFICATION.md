@@ -1,5 +1,13 @@
 # Prototype verification — latest: 15 October 2026
 
+## Milo 2.7 — a friend, not a teacher
+
+- Version code 21. Milo's personality is rewritten as the user's close friend: she reacts to the feeling in the user's words first, takes their side, lets them vent without lessons or advice, gets excited about good news, and is playful when they are bored. Replies are short like a voice message; stories, pep talks and explanations stay full length when asked. The safety rules stay (AI, not human; no guilt or pressure; encourage trusted people; emergency help when in danger; no diagnosis or medication).
+- Malayalam uses casual Kerala friend talk (നീ, never നിങ്ങൾ) with words that fit the moment (അയ്യോ for bad news, ആഹാ / അടിപൊളി for good news).
+- Checked with Gemma 4 on the S23 Ultra using 10 emotional messages in English and Malayalam (bad day at work, loneliness, new job, boredom, no mood, a friend's anger, failed exam). Before: counsellor-style replies that offered choices ("Would you like to talk or rest?"), formal Malayalam and a long study lesson after a failed exam. After: short, warm, friend-like replies that ask what happened.
+- A tone tag written without brackets (e.g. "excited! …") is now understood instead of being spoken; emoji are never spoken; stray Chinese/Japanese/Korean characters are removed from Malayalam replies.
+- The shorter instructions also cut the reply time for a fresh conversation (about 11–15 s → 8–10 s on a cool phone; the phone was later throttled by heat during repeated tests).
+
 ## Milo 2.6 — quiet listening, dots, natural voice, pay-as-you-go human voice
 
 - Version code 20. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed on the Galaxy S23 Ultra test run described below.

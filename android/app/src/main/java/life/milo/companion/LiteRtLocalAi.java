@@ -55,22 +55,32 @@ final class LiteRtLocalAi extends AiProvider {
         if(engine!=null&&key.equals(engineKey))return engine;
         closeAll();
         SharedPreferences p=prefs(c);long start=SystemClock.elapsedRealtime();
-        // A GPU driver crash kills the process; the flag left behind sends the next start to the CPU.
-        if(!p.getBoolean("gemma4_gpu_trying",false)&&!p.getBoolean("gemma4_cpu_only",false)){
+        // A GPU driver crash kills the process and leaves the flag behind. The app can also be closed for other reasons
+        // during the GPU start, so only two interrupted starts in a row move Milo to the CPU, and a new app version tries the GPU again.
+        if(p.getBoolean("gemma4_cpu_only",false)&&p.getInt("gemma4_cpu_only_version",0)!=BuildConfig.VERSION_CODE)p.edit().remove("gemma4_cpu_only").remove("gemma4_gpu_crashes").commit();
+        if(p.getBoolean("gemma4_gpu_trying",false)){
+            int crashes=p.getInt("gemma4_gpu_crashes",0)+1;SharedPreferences.Editor ed=p.edit().remove("gemma4_gpu_trying").putInt("gemma4_gpu_crashes",crashes);
+            if(crashes>=2)ed.putBoolean("gemma4_cpu_only",true).putInt("gemma4_cpu_only_version",BuildConfig.VERSION_CODE);ed.commit();
+        }
+        if(!p.getBoolean("gemma4_cpu_only",false)){
             p.edit().putBoolean("gemma4_gpu_trying",true).commit();
-            try{engine=create(f,new Backend.GPU(),c);backend="GPU";}
+            try{engine=create(f,new Backend.GPU(),c);backend="GPU";p.edit().remove("gemma4_gpu_crashes").commit();}
             catch(Throwable e){Log.w(TAG,"GPU start failed, using CPU: "+e);}
             p.edit().remove("gemma4_gpu_trying").commit();
-        }else if(p.getBoolean("gemma4_gpu_trying",false)){p.edit().remove("gemma4_gpu_trying").putBoolean("gemma4_cpu_only",true).commit();}
+        }
         if(engine==null){engine=create(f,new Backend.CPU(),c);backend="CPU";}
         engineKey=key;Log.i(TAG,"Gemma 4 loaded on "+backend+" in "+(SystemClock.elapsedRealtime()-start)+"ms");
         return engine;
     }
     private static Engine create(File f,Backend b,Context c){Engine e=new Engine(new EngineConfig(f.getAbsolutePath(),b,null,null,4096,null,c.getCacheDir().getPath()));try{e.initialize();return e;}catch(RuntimeException|Error x){try{e.close();}catch(Throwable ignored){}throw x;}}
 
+    /** The small model sometimes slips a Chinese, Japanese or Korean character into Malayalam; those are dropped. */
+    static final java.util.regex.Pattern CJK=java.util.regex.Pattern.compile("[\\x{3040}-\\x{30FF}\\x{3400}-\\x{9FFF}\\x{AC00}-\\x{D7AF}\\x{F900}-\\x{FAFF}]+");
+    static String stray(String text,boolean malayalam){return text==null||!malayalam?text:CJK.matcher(text).replaceAll("");}
+
     static String instruction(String name,String language,String practice,String style,String context){
         String lang=language.toLowerCase(Locale.ROOT).startsWith("malayalam")
-            ?" Reply in natural, warm, everyday spoken Malayalam written in Malayalam script (മലയാളം), as people speak in Kerala. Use simple words and short sentences. Use English only for technical words the user used, or if the user writes in English and asks for it."
+            ?" Reply in Malayalam script (മലയാളം), the way close friends in Kerala chat: casual spoken Malayalam, not formal or bookish. Call the user നീ / നിനക്ക്, never നിങ്ങൾ. Pick words that fit the moment: for bad news അയ്യോ, ശോ, സാരമില്ല; for good news ആഹാ!, അടിപൊളി!, പൊളിച്ചു!; to ask ശരിക്കും?, എന്താ പറ്റിയേ?; for fun ഹഹ. Vary them. Short sentences. Use English only for technical words the user used, or if the user asks for English."
             :"";
         return systemInstruction(name,language,practice,style,context)
             +" You run fully on this phone with no internet or web search: never claim to look things up, and say when you are unsure."
@@ -85,6 +95,7 @@ final class LiteRtLocalAi extends AiProvider {
         try{
             long start=SystemClock.elapsedRealtime();boolean warm=engine!=null;Engine e=engine(app);long loaded=SystemClock.elapsedRealtime();
             boolean reuse=conversation(e,system,past,initial);
+            boolean ml=language.toLowerCase(Locale.ROOT).startsWith("malayalam");
             StringBuilder raw=new StringBuilder();long[] first={0};CountDownLatch done=new CountDownLatch(1);Throwable[] failure={null};
             ToneTag.reset();cancelled=false;active=conversation;
             conversation.sendMessageAsync(prompt,new MessageCallback(){
@@ -93,7 +104,7 @@ final class LiteRtLocalAi extends AiProvider {
                     synchronized(raw){if(first[0]==0)first[0]=SystemClock.elapsedRealtime();
                         // Chunks are deltas; tolerate a runtime that sends the whole text so far.
                         if(raw.length()>8&&piece.startsWith(raw.toString())){raw.setLength(0);}raw.append(piece);
-                        ToneTag.track(raw.toString());shown=ToneTag.visible(raw.toString());}
+                        ToneTag.track(raw.toString());shown=stray(ToneTag.visible(raw.toString()),ml);}
                     if(shown!=null&&!shown.trim().isEmpty())partial.accept(shown);
                 }
                 public void onDone(){done.countDown();}
@@ -105,7 +116,7 @@ final class LiteRtLocalAi extends AiProvider {
             active=null;
             String text;synchronized(raw){text=raw.toString();}
             if(cancelled||failure[0]!=null||done.getCount()>0){closeConversation();if(cancelled)throw new MainActivity.ApiFailure("Stopped.");Log.w(TAG,"generation failed: "+failure[0]);throw new MainActivity.ApiFailure("Gemma 4 could not finish this reply. Try again or a shorter message.");}
-            String tone=ToneTag.lastTone(text),body=ToneTag.visible(text);if(body==null)body=text;
+            String tone=ToneTag.lastTone(text),body=ToneTag.visible(text);if(body==null)body=text;body=stray(body,ml);
             MainActivity.GeminiReply reply=textReply(body);reply.tone=tone;
             conversationTurns.add("user:"+prompt);conversationTurns.add("assistant:"+reply.text);
             Log.i(TAG,(warm?"warm":"cold")+" "+backend+" load="+(loaded-start)+"ms reuse="+reuse+" firstText="+(first[0]==0?-1:first[0]-loaded)+"ms total="+(SystemClock.elapsedRealtime()-start)+"ms chars="+reply.text.length()+" tone="+tone);

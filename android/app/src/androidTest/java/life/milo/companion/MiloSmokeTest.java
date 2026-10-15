@@ -283,6 +283,11 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
         assertNull(ToneTag.tone("[grumpy] no"));assertEquals("no",ToneTag.visible("[grumpy] no"));
         assertEquals("angry",ToneTag.tone("[angry] Hmph"));assertEquals("Haha! Oh no.",ToneTag.visible("[laughing] Haha! [sad] Oh no."));assertEquals("sad",ToneTag.lastTone("[laughing] Haha! [sad] Oh no."));
         assertEquals("Hello ",ToneTag.visible("Hello [sa"));
+        // The model sometimes drops the brackets; emoji are never spoken.
+        assertEquals("excited",ToneTag.tone("excited! Oh my goodness"));assertEquals("Oh my goodness",ToneTag.visible("excited! Oh my goodness"));
+        assertNull("bare tag may still be arriving",ToneTag.visible("exci"));assertEquals("Happy birthday!",ToneTag.visible("Happy birthday!"));assertNull(ToneTag.tone("Happy birthday!"));
+        assertEquals("എന്താ?",LiteRtLocalAi.stray("എന്താ\u8fd9?",true));assertEquals("\u4f60\u597d",LiteRtLocalAi.stray("\u4f60\u597d",false));
+        assertEquals("So rough! I'm here.",ToneTag.visible("[comfort] So rough! \uD83E\uDD7A I'm here."));
     }
     public void testGeminiQuotaGuidanceKeepsSavedKey() {
         String message=ProviderErrors.classify("Google",429,"RESOURCE_EXHAUSTED");
