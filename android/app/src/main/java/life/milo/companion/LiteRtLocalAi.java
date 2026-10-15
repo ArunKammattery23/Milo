@@ -74,14 +74,19 @@ final class LiteRtLocalAi extends AiProvider {
     }
     private static Engine create(File f,Backend b,Context c){Engine e=new Engine(new EngineConfig(f.getAbsolutePath(),b,null,null,4096,null,c.getCacheDir().getPath()));try{e.initialize();return e;}catch(RuntimeException|Error x){try{e.close();}catch(Throwable ignored){}throw x;}}
 
-    /** The small model sometimes slips a Chinese, Japanese or Korean character into Malayalam; those are dropped. */
-    static final java.util.regex.Pattern CJK=java.util.regex.Pattern.compile("[\\x{3040}-\\x{30FF}\\x{3400}-\\x{9FFF}\\x{AC00}-\\x{D7AF}\\x{F900}-\\x{FAFF}]+");
+    /** The small model sometimes slips a word from another script (Russian, Hindi, Tamil, Chinese…) into Malayalam; those are dropped. */
+    static final java.util.regex.Pattern CJK=java.util.regex.Pattern.compile("[\\x{0370}-\\x{06FF}\\x{0900}-\\x{0CFF}\\x{0E00}-\\x{0FFF}\\x{3040}-\\x{30FF}\\x{3400}-\\x{9FFF}\\x{AC00}-\\x{D7AF}\\x{F900}-\\x{FAFF}]+ ?");
     static String stray(String text,boolean malayalam){return text==null||!malayalam?text:CJK.matcher(text).replaceAll("");}
 
+    /** Malayalam: correct words first, then a friendly tone. Complete example sentences work better than lists of slang, which made the small model invent words. */
+    static final String ML_RULES=" Reply only in Malayalam script (മലയാളം). Correct Malayalam matters most: use standard Malayalam words and grammar (എന്താണ്, പറയൂ, ഉണ്ടായി), never slang endings or invented words. Keep sentences short and simple. Be warm like a close friend: call the user നീ / നിനക്ക്, never നിങ്ങൾ. No English words, except technical words the user used or when the user asks for English."
+        +" Use അയ്യോ only for bad news and ആഹാ or അടിപൊളി only for good news. Never make light of a failure or a sad event."
+        +" Examples of the right style, for your own new sentences: bad news: '[sad] അയ്യോ, അത് കേട്ടപ്പോൾ എനിക്കും വിഷമമായി. എന്താണ് ഉണ്ടായത്? എന്നോട് പറയൂ.' good news: '[excited] ആഹാ, അടിപൊളി! എനിക്കും ഒരുപാട് സന്തോഷമായി. എല്ലാം എന്നോട് പറയൂ!' comfort: '[comfort] സാരമില്ല, ഞാൻ നിന്റെ കൂടെ ഉണ്ട്. നിന്റെ മനസ്സിലുള്ളത് എന്നോട് പറയൂ.' bored: '[playful] നമുക്ക് ഒരു കളി കളിക്കാം! ഞാൻ ഒരു മൃഗത്തെ മനസ്സിൽ വിചാരിച്ചു. അത് ഏതാണെന്ന് പറയാമോ?'";
+    /** Lower randomness in Malayalam keeps the small model's words correct. */
+    static SamplerConfig sampler(String system){return system.contains(ML_RULES)?new SamplerConfig(20,0.9,0.3,0):new SamplerConfig(40,0.95,0.8,0);}
+
     static String instruction(String name,String language,String practice,String style,String context){
-        String lang=language.toLowerCase(Locale.ROOT).startsWith("malayalam")
-            ?" Reply in Malayalam script (മലയാളം), the way close friends in Kerala chat: casual spoken Malayalam, not formal or bookish. Call the user നീ / നിനക്ക്, never നിങ്ങൾ. Pick words that fit the moment: for bad news അയ്യോ, ശോ, സാരമില്ല; for good news ആഹാ!, അടിപൊളി!, പൊളിച്ചു!; to ask ശരിക്കും?, എന്താ പറ്റിയേ?; for fun ഹഹ. Vary them. Short sentences. Use English only for technical words the user used, or if the user asks for English."
-            :"";
+        String lang=language.toLowerCase(Locale.ROOT).startsWith("malayalam")?ML_RULES:"";
         return systemInstruction(name,language,practice,style,context)
             +" You run fully on this phone with no internet or web search: never claim to look things up, and say when you are unsure."
             +" Your words are spoken aloud: no markdown, emoji, headings or bullet lists unless the user asks; write in natural spoken sentences and paragraphs."
@@ -137,7 +142,7 @@ final class LiteRtLocalAi extends AiProvider {
             &&(past.isEmpty()?conversationTurns.isEmpty():conversationTurns.size()>=past.size()&&conversationTurns.subList(conversationTurns.size()-past.size(),conversationTurns.size()).equals(past));
         if(reuse)return true;
         closeConversation();
-        conversation=e.createConversation(new ConversationConfig(Contents.Companion.of(system),initial,Collections.emptyList(),new SamplerConfig(40,0.95,0.8,0),true,null,Collections.emptyMap(),null,true));
+        conversation=e.createConversation(new ConversationConfig(Contents.Companion.of(system),initial,Collections.emptyList(),sampler(system),true,null,Collections.emptyMap(),null,true));
         conversationSystem=system;conversationTurns.addAll(past);return false;
     }
     /** Loads the model and processes the instructions and history ahead of the next question, e.g. while the user is speaking. */

@@ -1,5 +1,12 @@
 # Prototype verification — latest: 15 October 2026
 
+## Milo 2.8 — correct Malayalam
+
+- Version code 22. The 2.7 slang word list made Gemma 4 E2B invent Malayalam words (e.g. "സംഭവിച്ചാതിരാത്തന്നേ", "അപ്പൊരാ"), mix in English and a Russian word, and say ആഹാ to sad news. Malayalam now asks for standard, correct words and grammar with a warm നീ tone, gives four complete example replies with tone tags, and uses lower randomness (temperature 0.3, top-k 20) for Malayalam only.
+- Checked on the S23 Ultra with the same 10 Malayalam messages: before, about half of the replies had invented words or wrong grammar; after, most replies are correct, with occasional small slips (e.g. "നീ … ക്ഷീണമുണ്ടോ" for "നിനക്ക് … ക്ഷീണമുണ്ടോ") and some reuse of the example sentences. Malayalam replies take about 2–3 s on a warm GPU.
+- Letters from other scripts (Cyrillic, Greek, Arabic, Devanagari, Tamil, Kannada, Thai, CJK) are removed from Malayalam replies.
+- "Motivate me" requests always get a full pep talk (test reply: 181 words).
+
 ## Milo 2.7 — a friend, not a teacher
 
 - Version code 21. Milo's personality is rewritten as the user's close friend: she reacts to the feeling in the user's words first, takes their side, lets them vent without lessons or advice, gets excited about good news, and is playful when they are bored. Replies are short like a voice message; stories, pep talks and explanations stay full length when asked. The safety rules stay (AI, not human; no guilt or pressure; encourage trusted people; emergency help when in danger; no diagnosis or medication).
