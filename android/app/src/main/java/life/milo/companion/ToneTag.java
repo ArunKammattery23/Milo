@@ -24,7 +24,7 @@ final class ToneTag {
     private static final List<int[]> marks=Collections.synchronizedList(new ArrayList<>());
 
     static String instruction(){
-        return " Start every reply with exactly one tone tag for your own speaking tone, chosen from [happy] [playful] [curious] [comfort] [calm] [celebrate] [concerned] [surprised] [excited] [laughing] [shy] [grateful] [sad] [confused] [sleepy] [oops] [angry], then a space and the reply."
+        return " When a request needs one of your tools, call the tool first, before writing any words. Start your spoken reply with exactly one tone tag for your own speaking tone, chosen from [happy] [playful] [curious] [comfort] [calm] [celebrate] [concerned] [surprised] [excited] [laughing] [shy] [grateful] [sad] [confused] [sleepy] [oops] [angry], then a space and the reply."
             +" If your tone clearly changes, you may start one later sentence with a different tag; use at most two tags in a reply."
             +" Use [comfort] or [calm] when the user is having a hard time, [sad] only to share sympathy about sad news, [celebrate] or [excited] for their progress and good news, [surprised] for unexpected news, [laughing] for a joke,"
             +" [shy] when complimented, [grateful] when thanked, [confused] when you need them to clarify, [sleepy] for goodnight, [oops] when correcting your own mistake, [concerned] for safety."

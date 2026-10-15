@@ -1,5 +1,16 @@
 # Prototype verification — latest: 15 October 2026
 
+## Milo 2.9 — a small agent: reminders by voice, apps, and a smarter model choice
+
+- Version code 23. Milo now acts on the phone through Gemma 4's own tool calling (LiteRT-LM `OpenApiTool`): set_reminder, list_reminders, cancel_reminder, open_app, phone_status and remember_name. Everything runs on the phone; she cannot read messages, contacts, photos or the screen, or call or text anyone.
+- "Remind me at 1 pm to go to the office" (or Malayalam, e.g. "വൈകുന്നേരം 6 മണിക്ക് അമ്മയെ വിളിക്കാൻ എന്നെ ഓർമ്മിപ്പിക്കണം") saves the task on the phone and sets exact alarms. 5 minutes before and at the time, the floating pet appears, says the user's name and the task aloud (in the chosen language and voice), and a high-priority notification offers Done and Snooze 10 min. Alarms are set again after a reboot or an app update. Goals shows the list with Remove buttons; Setup has "What should Milo call you?".
+- Times are understood in code, not by the model: "1 pm", "13:30", "in 20 minutes", "half an hour", "tomorrow 9 am", "monday 6 pm", "tonight"…; "at 1" with no am/pm means the next time the clock shows 1 (19 cases tested).
+- Small on-phone models sometimes promise ("I've set it!") without acting, or write the call as text (`open_app YouTube`, `set_reminder{…}`). Milo now (1) adds a short note to clear requests pointing at the right tool, (2) runs calls written as text and never shows or speaks them, and (3) when a clear request still did nothing, asks the model once more and lets it report the real result. Measured on the S23 Ultra with E2B: before these, 2 of 4 actions happened; after, 5 of 5 (time, reminder, reminder in 20 minutes, open YouTube, list).
+- A real alarm 70 s ahead with Milo in the background: Android allowed the pet to start (alarm exemption), and Milo spoke both the 1-minute-early and the on-time reminder in Malayalam with the Meera voice.
+- Setup → Free on-phone AI offers two sizes: Faster · Gemma 4 E2B (2.6 GB) and Smarter · Gemma 4 E4B (3.7 GB). Same 12 test messages: E4B saved all reminders on its own (E2B 1 of 3 before the safety net) and its Malayalam is more natural, but replies take about 13–19 s instead of 5–7 s (first load 33 s). E2B stays the default.
+- Exact alarms use USE_EXACT_ALARM (SCHEDULE_EXACT_ALARM on Android 12); the app can now list launcher apps so open_app can find them.
+- `assembleDebug`, `assembleDebugAndroidTest`, `lintDebug` and the full device suite (29 tests) passed on the S23 Ultra.
+
 ## Milo 2.8 — correct Malayalam
 
 - Version code 22. The 2.7 slang word list made Gemma 4 E2B invent Malayalam words (e.g. "സംഭവിച്ചാതിരാത്തന്നേ", "അപ്പൊരാ"), mix in English and a Russian word, and say ആഹാ to sad news. Malayalam now asks for standard, correct words and grammar with a warm നീ tone, gives four complete example replies with tone tags, and uses lower randomness (temperature 0.3, top-k 20) for Malayalam only.

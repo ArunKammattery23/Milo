@@ -55,6 +55,7 @@ public final class FloatingPetService extends Service implements RecognitionList
             if("STOP_TALK".equals(action))end("Tap me when you want to talk.");
             else if("TALK".equals(action)&&mode==Mode.IDLE)startConversation();
             else if("SAY".equals(action)&&BuildConfig.DEBUG&&intent.hasExtra("text")){goForeground(true);talking=true;ensureVoice();respond(intent.getStringExtra("text"));}
+            else if("REMIND".equals(action))remind(intent.getStringExtra("text"),intent.getStringExtra("tone"));
             return START_NOT_STICKY;
         }
         prefs=getSharedPreferences("milo",MODE_PRIVATE);
@@ -79,6 +80,7 @@ public final class FloatingPetService extends Service implements RecognitionList
             // Loading Gemma 4 onto the GPU takes ~12 s; do it now so the first tap gets a quick reply.
             if(AiProvider.current(this) instanceof LiteRtLocalAi)worker.execute(()->LiteRtLocalAi.warm(this));
             if("TALK".equals(action))startConversation();
+            else if("REMIND".equals(action))remind(intent.getStringExtra("text"),intent.getStringExtra("tone"));
         }catch(Exception e){Log.w(TAG,"overlay failed: "+e);stopSelf();android.widget.Toast.makeText(this,"Android could not show the floating pet. Check display-over-other-apps permission.",android.widget.Toast.LENGTH_LONG).show();}
         return START_NOT_STICKY;
     }
@@ -179,13 +181,30 @@ public final class FloatingPetService extends Service implements RecognitionList
         ensureVoice();listen();
     }
     void ensureVoice(){
-        if(speech!=null){MiloSpeaker s=speech;s.refresh(()->{if(speech==s)ttsReady=s.ready();});return;}
+        if(speech!=null){MiloSpeaker s=speech;s.refresh(()->{if(speech!=s)return;ttsReady=s.ready();if(ttsReady&&pendingRemind!=null){Runnable r=pendingRemind;pendingRemind=null;r.run();}});return;}
         speech=new MiloSpeaker(this,prefs,new MiloSpeaker.Listener(){
             public void onStart(String id,String tone){if(mode==Mode.SPEAKING&&face!=null){face.setExpression(tone!=null?tone:"speaking");face.setTalking(true);}}
-            public void onDone(String id){if(id.equals("final"+turn)){if(face!=null)face.setTalking(false);afterSpeaking();}}
+            public void onDone(String id){if(id.equals(remindId)){remindId=null;mode=Mode.IDLE;if(face!=null){face.setTalking(false);face.setExpression(idleExpression());}ui.postDelayed(hideBubble,20_000);return;}
+                if(id.equals("final"+turn)){if(face!=null)face.setTalking(false);afterSpeaking();}}
             public void onLevel(float level){if(face!=null&&mode==Mode.SPEAKING)face.setLevel(level);}
         },()->{if(speech==null)return; // the pet was closed while the voice was loading
-            ttsReady=speech.ready();if(!ttsReady)Log.w(TAG,"no voice for "+MiloVoice.locale(prefs));});
+            ttsReady=speech.ready();if(!ttsReady)Log.w(TAG,"no voice for "+MiloVoice.locale(prefs));
+            if(ttsReady&&pendingRemind!=null){Runnable r=pendingRemind;pendingRemind=null;r.run();}});
+    }
+
+    /* ---- reminders the user asked for: Milo appears, says their name and the task ---- */
+    String remindId;Runnable pendingRemind;
+    void remind(String text,String remindTone){
+        if(face==null||text==null||text.isEmpty())return;
+        if(mode!=Mode.IDLE)end(null);
+        String expression=remindTone==null?"excited":remindTone,id="remind"+(++turn);remindId=id;
+        face.setExpression(expression);setBubble(text);ui.removeCallbacks(hideBubble);
+        Log.i(TAG,"reminder: "+text.length()+" chars");
+        Runnable say=()->{if(!id.equals(remindId)||speech==null||!ttsReady)return;
+            mode=Mode.SPEAKING;tone=expression;toneUntil=SystemClock.uptimeMillis()+15_000;speech.speak(MainActivity.cleanSpeech(text),expression,id);};
+        if(speech!=null&&ttsReady)say.run();else{pendingRemind=say;ensureVoice();
+            // Without a voice in a minute, the reminder stays as text and in the notification.
+            ui.postDelayed(()->{if(pendingRemind==say){pendingRemind=null;remindId=null;ui.postDelayed(hideBubble,30_000);}},60_000);}
     }
     void listen(){
         if(face==null||!talking)return;

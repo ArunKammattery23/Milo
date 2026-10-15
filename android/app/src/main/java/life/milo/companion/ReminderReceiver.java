@@ -13,7 +13,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,next.getTimeInMillis(),pending(c,601,"DAILY"));
         for(int n=0;n<ms.length();n++){JSONObject m=ms.optJSONObject(n);if(m!=null&&m.optLong("when")>System.currentTimeMillis())alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,m.optLong("when"),pending(c,m.optInt("id"),"MEMORY"));}
     }
-    @Override public void onReceive(Context c,Intent i){SharedPreferences p=c.getSharedPreferences("milo",Context.MODE_PRIVATE);if("android.intent.action.BOOT_COMPLETED".equals(i.getAction())){schedule(c);return;}if(!p.getBoolean("pet_enabled",true)||!p.getBoolean("reminders",false))return;
+    @Override public void onReceive(Context c,Intent i){SharedPreferences p=c.getSharedPreferences("milo",Context.MODE_PRIVATE);if("android.intent.action.BOOT_COMPLETED".equals(i.getAction())){schedule(c);MiloTasks.scheduleAll(c);return;}if(!p.getBoolean("pet_enabled",true)||!p.getBoolean("reminders",false))return;
         if(Build.VERSION.SDK_INT>=33&&c.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
         NotificationManager n=c.getSystemService(NotificationManager.class);n.createNotificationChannel(new NotificationChannel("care","Gentle reminders",NotificationManager.IMPORTANCE_DEFAULT));PendingIntent open=PendingIntent.getActivity(c,3,new Intent(c,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         String message="MEMORY".equals(i.getAction())?"An important moment you saved is coming up. Open Memories.":"A small pause, a stretch, or one kind step? Choose what suits you.";

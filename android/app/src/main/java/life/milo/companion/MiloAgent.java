@@ -1,0 +1,164 @@
+package life.milo.companion;
+
+import android.content.*;
+import android.content.pm.*;
+import android.os.BatteryManager;
+import android.util.Log;
+import com.google.ai.edge.litertlm.OpenApiTool;
+import com.google.ai.edge.litertlm.ToolKt;
+import com.google.ai.edge.litertlm.ToolProvider;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import org.json.*;
+
+/**
+ * Milo's small set of actions on this phone. The on-phone model decides when to call them; each runs here,
+ * on the phone, and returns a short result that Milo then puts into her own words.
+ * Milo can only do what these tools allow: she cannot read messages, contacts, photos or other apps.
+ */
+final class MiloAgent {
+    static final String TAG="MiloAgent";
+    /** Tools called during the latest reply, e.g. "set_reminder → Saved …", for the reply log and tests. */
+    static final List<String> lastCalls=Collections.synchronizedList(new ArrayList<>());
+
+    static String instruction(Context c){
+        String name=MiloTasks.userName(c);
+        return " You can act on this phone with tools. Follow these rules exactly:"
+            +" 1) If the user asks you to remind them, to remember or schedule a task for a time, or to set an alarm or timer (in any language, e.g. 'remind me at 1 pm to go to the office'), call set_reminder at once with the task and the time. Do not ask 'is that right?' first, and never only promise."
+            +" 2) If the user asks to open an app, call open_app at once."
+            +" 3) For the time, date, day or battery, call phone_status."
+            +" 4) Use list_reminders, cancel_reminder and remember_name when they fit."
+            +" 5) Never say you set, opened or saved anything unless you called the tool and its result says it worked; then tell the user the exact time from the result in a friendly way. If the time is missing, ask for it."
+            +" You cannot read messages, contacts, photos or the screen, and you cannot call or text anyone."
+            +(name.isEmpty()?"":" The user's name is "+name+"; use it now and then.");
+    }
+
+    /* Small on-phone models sometimes answer "I've set it!" without calling the tool. When a request clearly asks for an action,
+       a short note added to the message points the model at the right tool. */
+    static final java.util.regex.Pattern REMIND=java.util.regex.Pattern.compile("(?i)\\b(remind|reminder|remember to|don'?t let me forget|alarm|timer|wake me|notify me)\\b|ഓർമ്മിപ്പിക്ക|ഓർമിപ്പിക്ക|ഓർമ്മപ്പെടുത്ത|ഓർമപ്പെടുത്ത|അലാറം|ടൈമർ|റിമൈൻഡ്");
+    static final java.util.regex.Pattern OPEN=java.util.regex.Pattern.compile("(?i)^\\s*(?:please\\s+|can you\\s+|could you\\s+)?(?:open|launch|start)\\s+\\S|തുറക്ക|ഓപ്പൺ");
+    static final java.util.regex.Pattern LIST=java.util.regex.Pattern.compile("(?i)\\b(what|which|any|my|show)\\b.*\\breminders\\b|\\breminders?\\b.*\\b(do i have|today|tomorrow|list)\\b");
+    static final java.util.regex.Pattern CANCEL=java.util.regex.Pattern.compile("(?i)\\b(cancel|delete|remove|stop|clear)\\b.*\\b(reminders?|alarms?)\\b|\\b(reminders?|alarms?)\\b.*\\b(cancel|delete|remove)\\b");
+    /** The tool a request clearly asks for, or null when it is ordinary conversation. */
+    static String intent(String prompt){
+        if(prompt==null)return null;
+        if(LIST.matcher(prompt).find())return "list_reminders";if(CANCEL.matcher(prompt).find())return "cancel_reminder";
+        if(REMIND.matcher(prompt).find())return "set_reminder";if(OPEN.matcher(prompt).find())return "open_app";return null;
+    }
+    static String withHint(String prompt){
+        String tool=intent(prompt);if(tool==null)return prompt==null?"":prompt;
+        return prompt+"\n(Note for Milo: call "+tool+" now, before writing any words"+(tool.equals("set_reminder")?"; if no time is given, ask for it":"")+".)";
+    }
+    static boolean called(String tool){synchronized(lastCalls){for(String s:lastCalls)if(s.startsWith(tool+" "))return true;}return false;}
+
+    /* The model sometimes writes a call as plain words, e.g. "open_app YouTube" or "set_reminder(task='…', time='6 pm')".
+       Such text is never shown or spoken; Milo runs the call herself. */
+    static final String NAMES="set_reminder|open_app|phone_status|list_reminders|cancel_reminder|remember_name";
+    static final java.util.regex.Pattern WRITTEN=java.util.regex.Pattern.compile("`{0,3}(?:tool_code|tool_call|python)?\\s*\\b("+NAMES+")\\b\\s*(\\(([^)]*)\\)?|\\{([^}]*)\\}?|[^\\n.!?]*)`{0,3}");
+    static final java.util.regex.Pattern ARG=java.util.regex.Pattern.compile("(\\w+)\\s*[=:]\\s*(?:'([^']*)'|\"([^\"]*)\"|([^,)}]+))|'([^']*)'|\"([^\"]*)\"");
+    static String clean(String text){return text==null?null:text.replace("<|\"|>","\"").replaceAll("<\\|[^|>]{0,24}\\|>","");}
+    static String hideCalls(String text){return text==null?null:WRITTEN.matcher(clean(text)).replaceAll("").replaceAll("[ \\t]{2,}"," ").trim();}
+    /** Runs calls written as text; returns their results. */
+    static List<String> runWritten(Context c,String text){
+        List<String> results=new ArrayList<>();if(text==null)return results;java.util.regex.Matcher m=WRITTEN.matcher(clean(text));
+        while(m.find()){
+            String name=m.group(1),inside=m.group(3)!=null?m.group(3):m.group(4)!=null?m.group(4):m.group(2)==null||m.group(2).startsWith("(")||m.group(2).startsWith("{")?"":m.group(2).trim();JSONObject args=new JSONObject();
+            try{java.util.regex.Matcher a=ARG.matcher(inside);List<String> positional=new ArrayList<>();
+                while(a.find()){if(a.group(1)!=null){String v=a.group(2)!=null?a.group(2):a.group(3)!=null?a.group(3):a.group(4).trim();args.put(a.group(1),v);}else positional.add(a.group(5)!=null?a.group(5):a.group(6));}
+                if(positional.isEmpty()&&args.length()==0&&!inside.isEmpty())positional.add(inside.replaceAll("^[\"'(]+|[\"')]+$",""));
+                String[] order=name.equals("set_reminder")?new String[]{"task","time"}:name.equals("open_app")?new String[]{"app"}:name.equals("remember_name")?new String[]{"name"}:new String[]{"task"};
+                for(int i=0;i<positional.size()&&i<order.length;i++)if(!args.has(order[i]))args.put(order[i],positional.get(i));
+            }catch(JSONException ignored){}
+            String result=run(c,name,args);Log.i(TAG,"written "+name+" "+args+" → "+result);lastCalls.add(name+" → "+result);results.add(name+": "+result);
+        }
+        return results;
+    }
+    static String run(Context c,String name,JSONObject a){
+        try{switch(name){
+            case "set_reminder":return setReminder(c,a);case "list_reminders":return listReminders(c);case "cancel_reminder":return cancelReminder(c,a.optString("task"));
+            case "open_app":return openApp(c,a.optString("app"));case "phone_status":return status(c);case "remember_name":return rememberName(c,a.optString("name"));
+            default:return "Unknown action.";}}
+        catch(Exception e){return "Could not do that: "+e.getMessage();}
+    }
+
+    static List<ToolProvider> tools(Context context){
+        Context c=context.getApplicationContext();List<ToolProvider> list=new ArrayList<>();
+        list.add(tool("set_reminder","Saves a task and reminds the user at that time: the pet appears, says their name and the task, and shows a notification. Also reminds a few minutes before.",
+            props(new String[][]{{"task","What the user should do, as a short phrase in the user's language, e.g. 'Go to the office' or 'ഓഫീസിൽ പോകണം'."},
+                {"time","When, written in English: '1 pm', '13:30', 'in 20 minutes', 'tomorrow 9 am', 'monday 6 pm'."},
+                {"minutes_before","How many minutes before to give an early reminder; 5 unless the user says otherwise, 0 for none.","integer"}}),new String[]{"task","time"},
+            a->run(c,"set_reminder",a)));
+        list.add(tool("list_reminders","Lists the reminders Milo is keeping, soonest first.",new JSONObject(),new String[0],a->run(c,"list_reminders",a)));
+        list.add(tool("cancel_reminder","Removes a reminder. Use the words of the task, or 'all'.",props(new String[][]{{"task","Words from the task to remove, or 'all'."}}),new String[]{"task"},a->run(c,"cancel_reminder",a)));
+        list.add(tool("open_app","Opens an app installed on this phone, e.g. WhatsApp, YouTube, Camera, Clock, Settings.",props(new String[][]{{"app","The app's name."}}),new String[]{"app"},a->run(c,"open_app",a)));
+        list.add(tool("phone_status","Tells the current time, date, day and battery level.",new JSONObject(),new String[0],a->run(c,"phone_status",a)));
+        list.add(tool("remember_name","Saves the name the user wants to be called.",props(new String[][]{{"name","The user's name."}}),new String[]{"name"},a->run(c,"remember_name",a)));
+        return list;
+    }
+
+    interface Action{String run(JSONObject args)throws Exception;}
+    static ToolProvider tool(String name,String description,JSONObject properties,String[] required,Action action){
+        String schema;
+        try{schema=new JSONObject().put("name",name).put("description",description)
+            .put("parameters",new JSONObject().put("type","object").put("properties",properties).put("required",new JSONArray(Arrays.asList(required)))).toString();}
+        catch(JSONException e){throw new IllegalStateException(e);}
+        return ToolKt.tool(new OpenApiTool(){
+            public String getToolDescriptionJsonString(){return schema;}
+            public String execute(String args){
+                String result;
+                try{result=action.run(args==null||args.trim().isEmpty()?new JSONObject():new JSONObject(args));}
+                catch(Exception e){result="Could not do that: "+e.getMessage();}
+                Log.i(TAG,name+" "+args+" → "+result);lastCalls.add(name+" → "+result);return result;
+            }
+        });
+    }
+    static JSONObject props(String[][] p){
+        JSONObject o=new JSONObject();
+        try{for(String[] x:p)o.put(x[0],new JSONObject().put("type",x.length>2?x[2]:"string").put("description",x[1]));}catch(JSONException e){throw new IllegalStateException(e);}
+        return o;
+    }
+
+    /* ---- the actions ---- */
+    static String setReminder(Context c,JSONObject a)throws JSONException{
+        String task=clean(a.optString("task")).replaceAll("^[\"'\\s]+|[\"'\\s]+$",""),time=clean(a.optString("time")).replaceAll("[\"']","").trim();
+        if(task.isEmpty())return "Not saved: ask the user what the reminder is for.";
+        long when=MiloTasks.parseWhen(time,System.currentTimeMillis());
+        if(when<0)return "Not saved: the time '"+time+"' is unclear. Ask the user for the time.";
+        int before=a.has("minutes_before")?Math.max(0,Math.min(120,a.optInt("minutes_before",5))):5;
+        if(when-System.currentTimeMillis()<=before*60_000L+30_000)before=0;
+        JSONObject t=MiloTasks.add(c,task,when,before);
+        return "Saved: '"+task+"' at "+MiloTasks.time(c,when,false)+" "+MiloTasks.day(when)+(before>0?". An early reminder comes "+before+" minutes before.":".");
+    }
+    static String listReminders(Context c){
+        List<JSONObject> list=MiloTasks.upcoming(c);if(list.isEmpty())return "No reminders are saved.";
+        StringBuilder b=new StringBuilder();for(JSONObject t:list)b.append("- ").append(t.optString("task")).append(" at ").append(MiloTasks.time(c,t.optLong("when"),false)).append(' ').append(MiloTasks.day(t.optLong("when"))).append('\n');
+        return b.toString().trim();
+    }
+    static String cancelReminder(Context c,String words){
+        String w=words.toLowerCase(Locale.ROOT).trim();int removed=0;List<String> names=new ArrayList<>();
+        for(JSONObject t:MiloTasks.upcoming(c)){String task=t.optString("task");
+            if(w.equals("all")||w.equals("everything")||(!w.isEmpty()&&(task.toLowerCase(Locale.ROOT).contains(w)||w.contains(task.toLowerCase(Locale.ROOT))))){MiloTasks.remove(c,t.optInt("id"));removed++;names.add(task);}}
+        return removed==0?"No reminder matched '"+words+"'. Saved reminders:\n"+listReminders(c):"Removed: "+String.join(", ",names)+".";
+    }
+    static String openApp(Context c,String name){
+        String want=name.toLowerCase(Locale.ROOT).replace("app","").trim();if(want.isEmpty())return "Ask which app to open.";
+        PackageManager pm=c.getPackageManager();ResolveInfo best=null;int bestScore=0;
+        for(ResolveInfo r:pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0)){
+            String label=String.valueOf(r.loadLabel(pm)).toLowerCase(Locale.ROOT).trim();
+            int score=label.equals(want)?3:label.startsWith(want)||want.startsWith(label)?2:label.contains(want)?1:0;
+            if(score>bestScore){bestScore=score;best=r;}
+        }
+        if(best==null)return "No app called '"+name+"' is installed.";
+        Intent i=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setClassName(best.activityInfo.packageName,best.activityInfo.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try{c.startActivity(i);}catch(RuntimeException e){return "Android did not let Milo open "+best.loadLabel(pm)+".";}
+        return "Opened "+best.loadLabel(pm)+".";
+    }
+    static String status(Context c){
+        BatteryManager bm=c.getSystemService(BatteryManager.class);int level=bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        return "Now: "+new SimpleDateFormat("EEEE d MMMM yyyy, h:mm a",Locale.US).format(new Date())+". Battery "+level+"%"+(bm.isCharging()?", charging.":".");
+    }
+    static String rememberName(Context c,String name){
+        String n=name.trim().replaceAll("[^\\p{L}\\p{M} .'-]","");if(n.isEmpty()||n.length()>30)return "Not saved: ask for the name again.";
+        MiloTasks.prefs(c).edit().putString("user_name",n).apply();return "Saved. The user's name is "+n+".";
+    }
+}

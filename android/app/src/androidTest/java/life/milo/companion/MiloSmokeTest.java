@@ -165,6 +165,84 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
         String heard=pet.history.get(0).getJSONArray("parts").getJSONObject(0).getString("text");
         assertTrue("heard Malayalam: "+heard,heard.matches(".*[ഀ-ൿ].*"));
     }
+    static long at(int y,int mo,int d,int h,int mi){java.util.Calendar k=java.util.Calendar.getInstance();k.clear();k.set(y,mo-1,d,h,mi,0);return k.getTimeInMillis();}
+    /** Times as people say them, from Thursday 15 October 2026, 12:10. */
+    public void testReminderTimesAreUnderstood(){
+        long now=at(2026,10,15,12,10);
+        String[][] cases={{"1 pm","2026-10-15 13:00"},{"at 1","2026-10-15 13:00"},{"1","2026-10-15 13:00"},{"13:30","2026-10-15 13:30"},{"1:45 PM","2026-10-15 13:45"},
+            {"in 20 minutes","2026-10-15 12:30"},{"in an hour","2026-10-15 13:10"},{"in 1 hour 30 minutes","2026-10-15 13:40"},{"half an hour","2026-10-15 12:40"},
+            {"tomorrow 9 am","2026-10-16 09:00"},{"tomorrow at 5","2026-10-16 17:00"},{"monday 6 pm","2026-10-19 18:00"},{"11 am","2026-10-16 11:00"},{"9","2026-10-15 21:00"},
+            {"noon","2026-10-16 12:00"},{"tonight","2026-10-15 21:00"},{"this evening","2026-10-15 18:00"},{"2026-10-16 09:00","2026-10-16 09:00"},{"12:05 pm","2026-10-16 12:05"}};
+        java.text.SimpleDateFormat f=new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm",java.util.Locale.US);
+        for(String[] k:cases){long w=MiloTasks.parseWhen(k[0],now);assertEquals("'"+k[0]+"'",k[1],w<0?"unclear":f.format(new java.util.Date(w)));}
+        assertEquals("a time is needed",-1,MiloTasks.parseWhen("soon",now));assertEquals(-1,MiloTasks.parseWhen("",now));
+    }
+    /** When the model writes an action as words instead of calling it, Milo runs it herself and never shows or speaks that text. */
+    public void testWrittenActionsAreRunAndHidden(){
+        android.content.Context c=getInstrumentation().getTargetContext();
+        assertEquals("All set!",MiloAgent.hideCalls("set_reminder{task:<|\"|>drink water<|\"|>,time:<|\"|>in 20 minutes<|\"|>}All set!"));
+        assertEquals("",MiloAgent.hideCalls("open_app YouTube"));assertEquals("Okay.",MiloAgent.hideCalls("Okay. phone_status()"));assertEquals("I love apps!",MiloAgent.hideCalls("I love apps!"));
+        assertEquals("set_reminder",MiloAgent.intent("Please remind me at 1 pm to go to the office"));assertEquals("set_reminder",MiloAgent.intent("വൈകുന്നേരം 6 മണിക്ക് എന്നെ ഓർമ്മിപ്പിക്കണം"));
+        assertEquals("open_app",MiloAgent.intent("Open YouTube"));assertEquals("list_reminders",MiloAgent.intent("What reminders do I have?"));assertEquals("cancel_reminder",MiloAgent.intent("Cancel my office reminder"));
+        assertNull(MiloAgent.intent("I feel lonely today"));assertNull(MiloAgent.intent("Tell me a story about an alarming dragon"));
+        java.util.Set<Integer> before=new java.util.HashSet<>();for(org.json.JSONObject t:MiloTasks.upcoming(c))before.add(t.optInt("id"));
+        try{
+            MiloAgent.lastCalls.clear();java.util.List<String> r=MiloAgent.runWritten(c,"set_reminder{task:<|\"|>drink water<|\"|>,time:<|\"|>in 20 minutes<|\"|>}");
+            assertEquals(r.toString(),1,r.size());assertTrue(MiloAgent.called("set_reminder"));
+            org.json.JSONObject made=null;for(org.json.JSONObject t:MiloTasks.upcoming(c))if(!before.contains(t.optInt("id")))made=t;
+            assertNotNull(made);assertEquals("drink water",made.optString("task"));assertTrue(Math.abs(made.optLong("when")-System.currentTimeMillis()-1_200_000)<60_000);
+            r=MiloAgent.runWritten(c,"set_reminder(task='അമ്മയെ വിളിക്കാൻ', time='6 pm')");assertTrue(r.toString(),r.get(0).contains("Saved: 'അമ്മയെ വിളിക്കാൻ' at 6 PM"));
+        }finally{for(org.json.JSONObject t:MiloTasks.upcoming(c))if(!before.contains(t.optInt("id")))MiloTasks.remove(c,t.optInt("id"));}
+    }
+    /** At the time, the floating pet appears, says the user's name and the task, and a notification offers Done and Snooze. */
+    public void testReminderMakesThePetSpeakTheTask() throws Throwable {
+        MainActivity a=getActivity();
+        if(!android.provider.Settings.canDrawOverlays(a)){android.util.Log.i("MiloTasks","reminder test skipped: no overlay permission");return;}
+        a.prefs.edit().putString("user_name","Arun").putBoolean("pet_enabled",true).putString("voice_language","en-US").commit();
+        org.json.JSONObject t=MiloTasks.add(a,"Go to the office",System.currentTimeMillis()+3_600_000,5);int id=t.optInt("id");
+        try{
+            assertEquals(1,MiloTasks.upcoming(a).stream().filter(x->x.optInt("id")==id).count());
+            assertEquals("same task twice is kept once",id,MiloTasks.add(a,"go to the office",t.optLong("when"),5).optInt("id"));
+            String before=MiloTasks.speech(a,t,MiloTasks.BEFORE),now=MiloTasks.speech(a,t,MiloTasks.AT);
+            assertTrue(before,before.startsWith("Hey Arun! Just 5 minutes left.")&&before.contains("Go to the office"));assertTrue(now,now.startsWith("Arun, it's ")&&now.endsWith("Go to the office!"));
+            a.sendBroadcast(new android.content.Intent(a,TaskReceiver.class).setAction(TaskReceiver.FIRE).putExtra("id",id).putExtra("stage",MiloTasks.AT));
+            // The first English reminder may wait while Milo measures the phone voices once.
+            long end=android.os.SystemClock.uptimeMillis()+45000;FloatingPetService pet=null;boolean spoke=false;String bubble="";
+            while(android.os.SystemClock.uptimeMillis()<end){pet=FloatingPetService.current;
+                if(pet!=null&&pet.bubble!=null)bubble=String.valueOf(pet.bubble.getText());if(pet!=null&&pet.face!=null&&pet.face.talking())spoke=true;
+                if(spoke&&bubble.contains("Arun"))break;android.os.SystemClock.sleep(100);}
+            assertNotNull("pet should appear",pet);assertTrue("bubble shows the reminder: "+bubble,bubble.contains("Arun")&&bubble.contains("Go to the office"));assertTrue("Milo should say it aloud",spoke);
+            assertTrue("done after the time",MiloTasks.find(a,id).optBoolean("done"));
+            boolean notified=false;for(android.service.notification.StatusBarNotification n:a.getSystemService(android.app.NotificationManager.class).getActiveNotifications())if(n.getId()==id&&MiloTasks.TAG.equals(n.getTag()))notified=true;
+            assertTrue("notification with Done and Snooze",notified||a.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED);
+            MiloTasks.snooze(a,id,10);assertFalse("snooze brings it back",MiloTasks.find(a,id).optBoolean("done"));
+        }finally{MiloTasks.remove(a,id);a.startService(new android.content.Intent(a,FloatingPetService.class).setAction("STOP_TALK"));}
+    }
+    /** Milo understands "remind me…" by herself and calls her reminder tool, in English and Malayalam. */
+    public void testMiloSetsRemindersHerself() throws Exception {
+        android.content.Context c=getInstrumentation().getTargetContext();
+        if(!LiteRtLocalAi.ready(c)){android.util.Log.i("MiloAgent","agent test skipped: model not downloaded");return;}
+        c.getSharedPreferences("milo",0).edit().putString("user_name","Arun").commit();
+        java.util.Set<Integer> before=new java.util.HashSet<>();for(org.json.JSONObject t:MiloTasks.upcoming(c))before.add(t.optInt("id"));java.util.Set<Integer> original=new java.util.HashSet<>(before);
+        LiteRtLocalAi.release();LiteRtLocalAi ai=new LiteRtLocalAi(c);
+        String[][] asks={{"English","Please remind me at 1 pm to go to the office.","office"},{"Malayalam","വൈകുന്നേരം 6 മണിക്ക് അമ്മയെ വിളിക്കാൻ എന്നെ ഓർമ്മിപ്പിക്കണം.","6 PM"}};
+        try{
+            for(String[] k:asks){
+                long t0=android.os.SystemClock.elapsedRealtime();
+                MainActivity.GeminiReply r=ai.chat("","Milo",k[0],"","Gentle",k[1],new java.util.ArrayList<>(),"Current mood: Okay.",false,x->{});
+                android.util.Log.i("MiloAgent","agent "+k[0]+" "+(android.os.SystemClock.elapsedRealtime()-t0)+"ms calls="+MiloAgent.lastCalls+" reply="+r.text.replace('\n',' '));
+                org.json.JSONObject made=null;for(org.json.JSONObject t:MiloTasks.upcoming(c))if(!before.contains(t.optInt("id")))made=t;
+                assertNotNull("Milo should save a reminder for: "+k[1]+" reply: "+r.text,made);before.add(made.optInt("id"));
+                String when=MiloTasks.time(c,made.optLong("when"),false);
+                assertTrue("time for "+k[1]+": "+when,k[2].equals("office")?when.equals("1 PM"):when.equals(k[2]));
+                if(k[2].equals("office"))assertTrue("task: "+made.optString("task"),made.optString("task").toLowerCase(java.util.Locale.ROOT).contains("office"));
+                assertFalse("tone tag hidden: "+r.text,r.text.startsWith("["));
+            }
+            MainActivity.GeminiReply list=ai.chat("","Milo","English","","Gentle","What reminders do I have?",new java.util.ArrayList<>(),"Current mood: Okay.",false,x->{});
+            android.util.Log.i("MiloAgent","list calls="+MiloAgent.lastCalls+" reply="+list.text.replace('\n',' '));
+        }finally{for(org.json.JSONObject t:MiloTasks.upcoming(c))if(!original.contains(t.optInt("id")))MiloTasks.remove(c,t.optInt("id"));
+            LiteRtLocalAi.release();long end=android.os.SystemClock.uptimeMillis()+30000;while(LiteRtLocalAi.engine!=null&&android.os.SystemClock.uptimeMillis()<end)android.os.SystemClock.sleep(200);}
+    }
     /** Draws every expression of the fairy artwork and saves a gallery (files/milo-pet-gallery.png) for review. */
     public void testPetArtworkDrawsEveryExpression() throws Throwable {
         android.content.Context c=getInstrumentation().getTargetContext();

@@ -20,16 +20,21 @@ import org.json.*;
  * The engine and the live conversation stay loaded, so a follow-up turn only processes the new message.
  */
 final class LiteRtLocalAi extends AiProvider {
-    static final String KIND="gemma4",FILE="gemma-4-E2B-it.litertlm",NAME="Gemma 4 E2B";
-    static final String URL="https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm";
-    static final long SIZE=2_588_147_712L;
+    static final String KIND="gemma4";
+    /** The two Gemma 4 sizes: E2B is faster, E4B understands and speaks Malayalam better and follows tool rules more reliably. {id, file, name, size} */
+    static final String[][] SIZES={{"E2B","gemma-4-E2B-it.litertlm","Gemma 4 E2B","2588147712"},{"E4B","gemma-4-E4B-it.litertlm","Gemma 4 E4B","3659530240"}};
+    static String[] size(Context c){String id=prefs(c).getString("gemma4_size","E2B");for(String[] s:SIZES)if(s[0].equals(id))return s;return SIZES[0];}
+    static String fileName(Context c){return size(c)[1];}
+    static String name(Context c){return size(c)[2];}
+    static long bytes(Context c){return Long.parseLong(size(c)[3]);}
+    static String url(Context c){String f=fileName(c);return "https://huggingface.co/litert-community/"+f.replace("-it.litertlm","-it-litert-lm")+"/resolve/main/"+f;}
     static final String TAG="MiloLocalAi";
     final Context app;
     LiteRtLocalAi(Context context){app=context.getApplicationContext();}
-    String displayName(){return "Local "+NAME;}String id(){return LOCAL;}boolean isFree(){return true;}boolean needsNetwork(){return false;}
+    String displayName(){return "Local "+name(app);}String id(){return LOCAL;}boolean isFree(){return true;}boolean needsNetwork(){return false;}
 
-    static File file(Context c){File dir=c.getExternalFilesDir("models");return new File(dir!=null?dir:c.getNoBackupFilesDir(),FILE);}
-    static boolean ready(Context c){File f=file(c);return f.isFile()&&f.length()>2_000_000_000L&&!downloading(c);}
+    static File file(Context c){File dir=c.getExternalFilesDir("models");return new File(dir!=null?dir:c.getNoBackupFilesDir(),fileName(c));}
+    static boolean ready(Context c){File f=file(c);return f.isFile()&&f.length()>=bytes(c)*95/100&&!downloading(c);}
     static SharedPreferences prefs(Context c){return c.getSharedPreferences("milo",Context.MODE_PRIVATE);}
 
     /* ---- one engine and one conversation, shared by Talk and the floating pet ---- */
@@ -85,50 +90,63 @@ final class LiteRtLocalAi extends AiProvider {
     /** Lower randomness in Malayalam keeps the small model's words correct. */
     static SamplerConfig sampler(String system){return system.contains(ML_RULES)?new SamplerConfig(20,0.9,0.3,0):new SamplerConfig(40,0.95,0.8,0);}
 
-    static String instruction(String name,String language,String practice,String style,String context){
+    static String instruction(Context c,String name,String language,String practice,String style,String context){
         String lang=language.toLowerCase(Locale.ROOT).startsWith("malayalam")?ML_RULES:"";
         return systemInstruction(name,language,practice,style,context)
             +" You run fully on this phone with no internet or web search: never claim to look things up, and say when you are unsure."
             +" Your words are spoken aloud: no markdown, emoji, headings or bullet lists unless the user asks; write in natural spoken sentences and paragraphs."
-            +lang+ToneTag.instruction();
+            +lang+MiloAgent.instruction(c)+ToneTag.instruction();
     }
 
     MainActivity.GeminiReply chat(String key,String name,String language,String practice,String style,String prompt,List<JSONObject> history,String context,boolean search,Consumer<String> partial)throws Exception{
         if(!ready(app)){release();throw new MainActivity.ApiFailure("In Setup → Free on-phone AI, download Gemma 4 first.");}
-        String system=instruction(name,language,practice,style,context);List<String> past=new ArrayList<>();List<Message> initial=new ArrayList<>();turns(history,prompt,past,initial);
+        String system=instruction(app,name,language,practice,style,context);List<String> past=new ArrayList<>();List<Message> initial=new ArrayList<>();turns(history,prompt,past,initial);
         lock.lock();
         try{
             long start=SystemClock.elapsedRealtime();boolean warm=engine!=null;Engine e=engine(app);long loaded=SystemClock.elapsedRealtime();
-            boolean reuse=conversation(e,system,past,initial);
+            MiloAgent.lastCalls.clear();boolean reuse=conversation(app,e,system,past,initial);
             boolean ml=language.toLowerCase(Locale.ROOT).startsWith("malayalam");
-            StringBuilder raw=new StringBuilder();long[] first={0};CountDownLatch done=new CountDownLatch(1);Throwable[] failure={null};
-            ToneTag.reset();cancelled=false;active=conversation;
-            conversation.sendMessageAsync(prompt,new MessageCallback(){
-                public void onMessage(Message m){
-                    String piece=text(m);if(piece.isEmpty())return;String shown;
-                    synchronized(raw){if(first[0]==0)first[0]=SystemClock.elapsedRealtime();
-                        // Chunks are deltas; tolerate a runtime that sends the whole text so far.
-                        if(raw.length()>8&&piece.startsWith(raw.toString())){raw.setLength(0);}raw.append(piece);
-                        ToneTag.track(raw.toString());shown=stray(ToneTag.visible(raw.toString()),ml);}
-                    if(shown!=null&&!shown.trim().isEmpty())partial.accept(shown);
-                }
-                public void onDone(){done.countDown();}
-                public void onError(Throwable t){failure[0]=t;done.countDown();}
-            });
-            boolean interrupted=false;
-            while(true){try{if(done.await(cancelled?5:300,TimeUnit.SECONDS))break;cancel();if(!done.await(5,TimeUnit.SECONDS))break;}catch(InterruptedException x){interrupted=true;cancel();}}
-            if(interrupted)Thread.currentThread().interrupt();
-            active=null;
+            StringBuilder raw=new StringBuilder();long[] first={0};
+            ToneTag.reset();cancelled=false;
+            generate(MiloAgent.withHint(prompt),raw,first,ml,partial);
+            // A clear request ("remind me…", "open YouTube") must really happen. If the model wrote the call as words, Milo runs it;
+            // if it only promised, Milo asks once more. Either way the model then tells the user the real result.
             String text;synchronized(raw){text=raw.toString();}
-            if(cancelled||failure[0]!=null||done.getCount()>0){closeConversation();if(cancelled)throw new MainActivity.ApiFailure("Stopped.");Log.w(TAG,"generation failed: "+failure[0]);throw new MainActivity.ApiFailure("Gemma 4 could not finish this reply. Try again or a shorter message.");}
-            String tone=ToneTag.lastTone(text),body=ToneTag.visible(text);if(body==null)body=text;body=stray(body,ml);
+            String wanted=MiloAgent.intent(prompt);List<String> written=MiloAgent.runWritten(app,text);String followUp=null;
+            if(!written.isEmpty())followUp="(Result for Milo: "+String.join("; ",written)+". Now tell the user what happened in one or two friendly sentences, without naming any tool.)";
+            else if(wanted!=null&&!MiloAgent.called(wanted))followUp="(Note for Milo: nothing has happened yet. Call "+wanted+" now. Then say the real result in one short, happy sentence; do not apologise and do not name the tool.)";
+            if(followUp!=null){synchronized(raw){raw.append(' ');}Log.i(TAG,"follow-up for "+(written.isEmpty()?"missing "+wanted:"written call"));generate(followUp,raw,first,ml,partial);MiloAgent.runWritten(app,raw.substring(text.length()));synchronized(raw){text=raw.toString();}}
+            String tone=ToneTag.lastTone(text),body=MiloAgent.hideCalls(ToneTag.visible(text));if(body==null||body.isEmpty())body=MiloAgent.hideCalls(text);body=stray(body,ml);
             MainActivity.GeminiReply reply=textReply(body);reply.tone=tone;
             conversationTurns.add("user:"+prompt);conversationTurns.add("assistant:"+reply.text);
-            Log.i(TAG,(warm?"warm":"cold")+" "+backend+" load="+(loaded-start)+"ms reuse="+reuse+" firstText="+(first[0]==0?-1:first[0]-loaded)+"ms total="+(SystemClock.elapsedRealtime()-start)+"ms chars="+reply.text.length()+" tone="+tone);
+            Log.i(TAG,(warm?"warm":"cold")+" "+backend+" load="+(loaded-start)+"ms reuse="+reuse+" firstText="+(first[0]==0?-1:first[0]-loaded)+"ms total="+(SystemClock.elapsedRealtime()-start)+"ms chars="+reply.text.length()+" tone="+tone+" tools="+MiloAgent.lastCalls.size());if(BuildConfig.DEBUG)Log.d(TAG,"raw: "+text.substring(0,Math.min(400,text.length())).replace('\n',' '));
             return reply;
         }catch(MainActivity.ApiFailure x){throw x;}
         catch(Exception|LinkageError x){Log.w(TAG,"Gemma 4 failed: "+x);closeAll();throw new MainActivity.ApiFailure("Gemma 4 could not run on this phone. Close heavy apps and try again, or choose a smaller model in Setup.");}
         finally{active=null;if(closeAfterUse)closeAll();lock.unlock();}
+    }
+    /** Sends one message in the live conversation and streams the visible reply so far (all rounds of this turn) to partial. */
+    private static void generate(String message,StringBuilder raw,long[] first,boolean ml,Consumer<String> partial)throws MainActivity.ApiFailure{
+        CountDownLatch done=new CountDownLatch(1);Throwable[] failure={null};int from;synchronized(raw){from=raw.length();}
+        active=conversation;
+        conversation.sendMessageAsync(message,new MessageCallback(){
+            public void onMessage(Message m){
+                if(m.getToolCalls()!=null&&!m.getToolCalls().isEmpty())Log.i(TAG,"tool call: "+m.getToolCalls().get(0).getName());
+                String piece=text(m);if(piece.isEmpty())return;String shown;
+                synchronized(raw){if(first[0]==0)first[0]=SystemClock.elapsedRealtime();
+                    // Chunks are deltas; tolerate a runtime that sends the whole text so far.
+                    if(raw.length()-from>8&&piece.startsWith(raw.substring(from))){raw.setLength(from);}raw.append(piece);
+                    ToneTag.track(raw.toString());shown=stray(MiloAgent.hideCalls(ToneTag.visible(raw.toString())),ml);}
+                if(shown!=null&&!shown.trim().isEmpty())partial.accept(shown);
+            }
+            public void onDone(){done.countDown();}
+            public void onError(Throwable t){failure[0]=t;done.countDown();}
+        });
+        boolean interrupted=false;
+        while(true){try{if(done.await(cancelled?5:300,TimeUnit.SECONDS))break;cancel();if(!done.await(5,TimeUnit.SECONDS))break;}catch(InterruptedException x){interrupted=true;cancel();}}
+        if(interrupted)Thread.currentThread().interrupt();
+        active=null;
+        if(cancelled||failure[0]!=null||done.getCount()>0){closeConversation();if(cancelled)throw new MainActivity.ApiFailure("Stopped.");Log.w(TAG,"generation failed: "+failure[0]);throw new MainActivity.ApiFailure("Gemma 4 could not finish this reply. Try again or a shorter message.");}
     }
     /** Recent history (without the new prompt) as comparable strings and as model messages. */
     private static void turns(List<JSONObject> history,String prompt,List<String> past,List<Message> initial)throws JSONException{
@@ -136,20 +154,20 @@ final class LiteRtLocalAi extends AiProvider {
         for(int i=Math.max(0,all.length()-13);i<all.length()-1;i++){JSONObject t=all.getJSONObject(i);String role=t.optString("role"),words=t.optString("content");past.add(role+":"+words);initial.add("user".equals(role)?Message.Companion.user(words):Message.Companion.model(words));}
     }
     /** Keeps the live conversation when it already holds this history; otherwise starts one with the instructions processed up front. True when reused. */
-    private static boolean conversation(Engine e,String system,List<String> past,List<Message> initial){
+    private static boolean conversation(Context c,Engine e,String system,List<String> past,List<Message> initial){
         // The live conversation may remember more than the trimmed history it is given; that is fine until it gets long.
         boolean reuse=conversation!=null&&conversation.isAlive()&&system.equals(conversationSystem)&&conversationTurns.size()<=24
             &&(past.isEmpty()?conversationTurns.isEmpty():conversationTurns.size()>=past.size()&&conversationTurns.subList(conversationTurns.size()-past.size(),conversationTurns.size()).equals(past));
         if(reuse)return true;
         closeConversation();
-        conversation=e.createConversation(new ConversationConfig(Contents.Companion.of(system),initial,Collections.emptyList(),sampler(system),true,null,Collections.emptyMap(),null,true));
+        conversation=e.createConversation(new ConversationConfig(Contents.Companion.of(system),initial,MiloAgent.tools(c),sampler(system),true,null,Collections.emptyMap(),null,true));
         conversationSystem=system;conversationTurns.addAll(past);return false;
     }
     /** Loads the model and processes the instructions and history ahead of the next question, e.g. while the user is speaking. */
     static void prepare(Context c,String name,String language,String practice,String style,String context,List<JSONObject> history){
         if(!ready(c))return;lock.lock();
         try{long start=SystemClock.elapsedRealtime();List<String> past=new ArrayList<>();List<Message> initial=new ArrayList<>();turns(history,"",past,initial);
-            boolean reused=conversation(engine(c.getApplicationContext()),instruction(name,language,practice,style,context),past,initial);
+            boolean reused=conversation(c,engine(c.getApplicationContext()),instruction(c,name,language,practice,style,context),past,initial);
             Log.i(TAG,"prepared in "+(SystemClock.elapsedRealtime()-start)+"ms reused="+reused);}
         catch(Throwable e){Log.w(TAG,"prepare failed: "+e);}finally{lock.unlock();}
     }
@@ -167,15 +185,16 @@ final class LiteRtLocalAi extends AiProvider {
         }
     }
     static String startDownload(Context c){
-        if(ready(c))return NAME+" is already downloaded.";if(downloading(c))return "The download is already running.";
+        if(ready(c))return name(c)+" is already downloaded.";if(downloading(c))return "The download is already running.";
         File f=file(c);release();f.delete();File dir=f.getParentFile();
-        if(dir==null||dir.getUsableSpace()<SIZE+300_000_000L)return "Not enough free storage. Gemma 4 needs about 2.9 GB free; this phone has "+(dir==null?0:dir.getUsableSpace()/1_000_000)+" MB.";
-        DownloadManager.Request r=new DownloadManager.Request(Uri.parse(URL)).setTitle("Milo · "+NAME+" on-phone AI").setDescription("2.6 GB · Apache-2.0 · runs offline after download")
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE).setAllowedOverMetered(false).setAllowedOverRoaming(false).setDestinationInExternalFilesDir(c,"models",FILE);
+        long need=bytes(c);String gb=String.format(Locale.US,"%.1f GB",need/1e9);
+        if(dir==null||dir.getUsableSpace()<need+300_000_000L)return "Not enough free storage. "+name(c)+" needs about "+String.format(Locale.US,"%.1f GB",(need+300_000_000L)/1e9)+" free; this phone has "+(dir==null?0:dir.getUsableSpace()/1_000_000)+" MB.";
+        DownloadManager.Request r=new DownloadManager.Request(Uri.parse(url(c))).setTitle("Milo · "+name(c)+" on-phone AI").setDescription(gb+" · Apache-2.0 · runs offline after download")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE).setAllowedOverMetered(false).setAllowedOverRoaming(false).setDestinationInExternalFilesDir(c,"models",fileName(c));
         prefs(c).edit().putLong("gemma4_download",c.getSystemService(DownloadManager.class).enqueue(r)).apply();
         return "Download started on Wi-Fi. You can leave Milo; progress shows in notifications.";
     }
     static void cancelDownload(Context c){long id=prefs(c).getLong("gemma4_download",-1);if(id>=0)c.getSystemService(DownloadManager.class).remove(id);prefs(c).edit().remove("gemma4_download").apply();}
     /** Removes the model file and frees its memory. */
-    static void delete(Context c){cancelDownload(c);release();file(c).delete();File[] caches=c.getCacheDir().listFiles();if(caches!=null)for(File f:caches)if(f.getName().startsWith(FILE+"_"))f.delete();}
+    static void delete(Context c){cancelDownload(c);release();file(c).delete();File[] caches=c.getCacheDir().listFiles();if(caches!=null)for(File f:caches)if(f.getName().startsWith(fileName(c)+"_"))f.delete();}
 }
