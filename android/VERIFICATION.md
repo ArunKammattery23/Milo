@@ -1,5 +1,13 @@
 # Prototype verification — latest: 15 October 2026
 
+## Milo 2.6 — quiet listening, dots, natural voice, pay-as-you-go human voice
+
+- Version code 20. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed on the Galaxy S23 Ultra test run described below.
+- The floating pet no longer beeps each time it starts listening: Milo mutes the media and system sound for that moment and restores it (checked: volume unchanged afterwards). While listening and thinking the bubble shows animated dots instead of words; Setup → Floating pet → "Show Milo's words in the pet's bubble while she speaks" can hide the reply text.
+- Sweet Girl no longer raises the pitch strongly (1.04 instead of 1.16), so voices sound less machine-like.
+- Optional pay-as-you-go human voice through Google Gemini (`gemini-3.8-flash-lite-tts`, voice "Leda" for Sweet Girl, emotion as a style direction): verified with the owner's key in English and Malayalam. It is off by default because Google takes about 4–5 s before the first audio (streaming did not shorten that: first audio at ~4 s), and the free tier allows 3 requests a minute. Milo spaces requests, groups sentences after the first, and falls back to the offline voice on quota or network errors.
+- Fixed a crash when the screen closed while Milo was still preparing speech.
+
 ## Milo 2.5 — voice studio, on-phone AI voices, full-length stories
 
 - Version code 19. `assembleDebug`, `assembleDebugAndroidTest` and `lintDebug` passed; **all 24 smoke tests passed on the Galaxy S23 Ultra** and Milo settings were byte-identical before and after.

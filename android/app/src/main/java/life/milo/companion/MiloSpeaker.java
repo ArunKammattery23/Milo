@@ -41,11 +41,13 @@ final class MiloSpeaker {
         });
     }
     boolean ready(){return ready;}
+    /** Hands work to a queue unless the speaker has shut down (e.g. the screen closed mid-sentence). */
+    private void run(ExecutorService queue,Runnable task){if(closed)return;try{queue.execute(task);}catch(RejectedExecutionException ignored){}}
     String engine(){return engine;}
     TextToSpeech phone(){return tts;}
 
     /** Re-reads language, character and voice; runs after any queued speech. */
-    void refresh(Runnable after){render.execute(()->{configure();if(after!=null)ui.post(after);});}
+    void refresh(Runnable after){run(render,()->{configure();if(after!=null)ui.post(after);});}
 
     private void configure(){
         Locale locale=MiloVoice.locale(prefs);MiloVoice.Character ch=MiloVoice.character(prefs);boolean ml="ml".equals(locale.getLanguage());
@@ -85,28 +87,49 @@ final class MiloSpeaker {
     }
 
     /** The next sentence spoken starts a reply, so it gets the emotion's little sound first (if enabled). */
-    void beginReply(){leadNext=true;}
+    void beginReply(){leadNext=true;humanStarted=false;}
 
     /** Queues a sentence in an emotion; id is reported to the listener when that sentence finishes. */
     void speak(String text,String tone,String id){
         if(text==null||text.trim().isEmpty()){mark(id);return;}
+        if(human()){
+            // Human voice: each request costs quota, so after the first sentence, sentences in one tone go together.
+            boolean last=id.contains("final");
+            if(!humanStarted){humanStarted=true;flushBatch();queue(text,tone,id);return;}
+            if(batch.length()>0&&!java.util.Objects.equals(tone,batchTone))flushBatch();
+            if(batch.length()>0)batch.append(' ');batch.append(text);batchTone=tone;batchId=id;ui.removeCallbacks(batchTimer);
+            if(last||batch.length()>=700)flushBatch();else ui.postDelayed(batchTimer,1500);
+            return;
+        }
+        queue(text,tone,id);
+    }
+    private final StringBuilder batch=new StringBuilder();private String batchTone,batchId;private boolean humanStarted;
+    private final Runnable batchTimer=this::flushBatch;
+    private void flushBatch(){ui.removeCallbacks(batchTimer);if(batch.length()==0)return;String t=batch.toString();batch.setLength(0);queue(t,batchTone,batchId);}
+    /** Human voice is on and usable: chosen in Voice Studio, a Gemini key is saved, and no recent quota error. */
+    boolean human(){return prefs.getBoolean("voice_human",false)&&GeminiVoice.available(app);}
+    /** Engine that rendered the last sentence: "human", "phone" or an AI voice id. */
+    volatile String lastEngine="";
+    private void queue(String text,String tone,String id){
         int gen=generation.get();boolean lead=leadNext;leadNext=false;pending.incrementAndGet();
-        render.execute(()->{
+        run(render,()->{
             if(gen!=generation.get()||closed){pending.decrementAndGet();return;}
             List<Clip> clips=new ArrayList<>();
             String sound=lead&&prefs.getBoolean("voice_sounds",true)?MiloVoice.interjection(tone,MiloVoice.malayalam(prefs)):null;
-            if(sound!=null){Clip s=clip(sound,tone,id+"·lead");if(s!=null)clips.add(s);}
-            Clip main=clip(text,tone,id);if(main!=null)clips.add(main);
-            play.execute(()->{try{for(Clip c:clips){if(gen!=generation.get()||closed)break;playClip(c,gen,id,tone);}}finally{finish(id,gen);}});
+            Clip main;
+            if(sound!=null&&human()){main=clip(sound+" "+text,tone,id);}
+            else{if(sound!=null){Clip s=clip(sound,tone,id+"·lead");if(s!=null)clips.add(s);}main=clip(text,tone,id);}
+            if(main!=null)clips.add(main);
+            run(play,()->{try{for(Clip c:clips){if(gen!=generation.get()||closed)break;playClip(c,gen,id,tone);}}finally{finish(id,gen);}});
         });
     }
     /** Reports id once everything queued before it has been spoken. */
-    void mark(String id){int gen=generation.get();pending.incrementAndGet();render.execute(()->play.execute(()->finish(id,gen)));}
+    void mark(String id){flushBatch();int gen=generation.get();pending.incrementAndGet();run(render,()->run(play,()->finish(id,gen)));}
     private void finish(String id,int gen){if(pending.decrementAndGet()<=0)releaseFocus();if(gen==generation.get()&&!closed)ui.post(()->{listener.onLevel(0);listener.onDone(id);});}
 
     /** Stops speaking now and drops anything queued. */
     void stop(){
-        generation.incrementAndGet();leadNext=false;
+        generation.incrementAndGet();leadNext=false;ui.removeCallbacks(batchTimer);batch.setLength(0);
         try{tts.stop();}catch(RuntimeException ignored){}
         for(CountDownLatch l:synthesis.values())l.countDown();
         AudioTrack t=track;if(t!=null)try{t.pause();t.flush();}catch(IllegalStateException ignored){}
@@ -122,8 +145,14 @@ final class MiloSpeaker {
         MiloVoice.Character ch=MiloVoice.character(prefs);float strength=prefs.getInt("voice_emotion",100)/100f;
         float[] e=MiloVoice.emotion(tone);
         float pitch=ch.pitch*(1+(e[0]-1)*strength),rate=ch.rate*(1+(e[1]-1)*strength),volume=Math.min(1,ch.volume*(1+(e[2]-1)*strength));
-        long start=SystemClock.elapsedRealtime();Clip c;String engineNow=engine;
-        if(engineNow.startsWith("ai:")){
+        long start=SystemClock.elapsedRealtime();Clip c=null;String engineNow=engine;
+        if(human()){
+            // Gemini acts the emotion itself, so no pitch shifting: the voice stays natural.
+            short[] pcm=GeminiVoice.speak(app,prefs,text,tone);
+            if(pcm!=null){c=new Clip(pcm,24000,1,Math.min(1,ch.volume*(1+(e[2]-1)*0.4f)));engineNow="human";}
+        }
+        if(c!=null){}
+        else if(engineNow.startsWith("ai:")){
             // AI voices already sound like the character, so they get half the pitch change; resampled playback carries it.
             float aiPitch=1+(pitch-1)*0.5f;
             c=aiClip(text,engineNow,rate/aiPitch,aiPitch,volume);
@@ -132,7 +161,7 @@ final class MiloSpeaker {
             Clip raw=phoneClip(text,"milo-"+id+"-"+SystemClock.uptimeMillis());c=raw==null?null:new Clip(raw.pcm,raw.rate,1,volume);
         }
         if(c==null)return null;
-        effects(c.pcm,c.rate,ch.effect);String extra=MiloVoice.emotionEffect(tone);if(extra!=null&&strength>0)effects(c.pcm,c.rate,extra);
+        effects(c.pcm,c.rate,ch.effect);String extra=MiloVoice.emotionEffect(tone);if(extra!=null&&strength>0&&!engineNow.equals("human"))effects(c.pcm,c.rate,extra);lastEngine=engineNow;
         Log.i(TAG,engineNow+" rendered "+text.length()+" chars in "+(SystemClock.elapsedRealtime()-start)+"ms tone="+tone);
         return c;
     }

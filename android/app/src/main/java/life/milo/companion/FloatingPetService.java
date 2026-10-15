@@ -193,16 +193,16 @@ public final class FloatingPetService extends Service implements RecognitionList
         Intent i=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE,MiloVoice.locale(prefs).toLanguageTag()).putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS,true).putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1)
             .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,getPackageName());
-        setBubble(history.isEmpty()&&misses==0?"I'm listening… tap me when you finish.":"Listening…");
+        showDots();muteBeep();
         try{recognizer.startListening(i);}catch(RuntimeException e){end("Speech recognition could not start.");}
     }
-    @Override public void onReadyForSpeech(Bundle b){}
+    @Override public void onReadyForSpeech(Bundle b){ui.removeCallbacks(unmute);ui.postDelayed(unmute,400);}
     @Override public void onBeginningOfSpeech(){}
     @Override public void onRmsChanged(float rms){if(face!=null)face.setLevel((rms+2)/12f);}
     @Override public void onBufferReceived(byte[] b){}
     @Override public void onEndOfSpeech(){if(mode==Mode.LISTENING&&face!=null)face.setExpression("thinking");}
     @Override public void onEvent(int e,Bundle b){}
-    @Override public void onPartialResults(Bundle b){String words=first(b);if(mode==Mode.LISTENING&&!words.isEmpty())setBubble("“"+words+"”");}
+    @Override public void onPartialResults(Bundle b){}
     @Override public void onResults(Bundle b){if(mode!=Mode.LISTENING)return;String words=first(b);Log.i(TAG,"heard "+words.length()+" chars");if(words.isEmpty())missed();else respond(words);}
     @Override public void onError(int error){
         Log.i(TAG,"listen error "+error+" in "+mode+", misses="+misses);
@@ -221,7 +221,7 @@ public final class FloatingPetService extends Service implements RecognitionList
     void missed(){if(++misses>=3)end("Tap me when you want to talk.");else ui.postDelayed(this::listen,150);}
 
     void respond(String prompt){
-        mode=Mode.THINKING;misses=0;face.setExpression("thinking");setBubble("“"+prompt+"”");
+        mode=Mode.THINKING;misses=0;face.setExpression("thinking");showDots();
         final int id=++turn;spoken=0;tone=null;ToneTag.reset();if(speech!=null){speech.stop();speech.beginReply();}
         AiProvider provider=AiProvider.current(this);String key;
         try{key=KeyVault.loadForProvider(this,provider.id());}catch(Exception e){end("Open Milo → Setup to unlock your AI key.");return;}
@@ -234,13 +234,13 @@ public final class FloatingPetService extends Service implements RecognitionList
         worker.execute(()->{
             try{
                 MainActivity.GeminiReply r=provider.chat(key,name,language,prefs.getString("practice_language",""),prefs.getString("companion_style","Gentle"),prompt,past,context,false,partial->ui.post(()->{
-                    if(id!=turn||mode==Mode.IDLE)return;setBubble(name+": "+partial);
+                    if(id!=turn||mode==Mode.IDLE)return;if(showWords())setBubble(name+": "+partial);
                     int end=MainActivity.sentenceBoundary(partial,spoken);if(end>spoken){speak(partial.substring(spoken,end),"chunk"+id,ToneTag.toneAt(spoken));spoken=end;}
                 }));
                 ui.post(()->{
                     if(id!=turn||mode==Mode.IDLE)return;
                     try{history.add(MainActivity.turn("user",prompt));history.add(MainActivity.turn("model",r.text));while(history.size()>16){history.remove(0);history.remove(0);}}catch(Exception ignored){}
-                    tone=r.tone;toneUntil=SystemClock.uptimeMillis()+10_000;setBubble(name+": "+r.text);
+                    tone=r.tone;toneUntil=SystemClock.uptimeMillis()+10_000;if(showWords())setBubble(name+": "+r.text);else setBubble(null);
                     if(!ttsReady){afterSpeaking();return;}
                     mode=Mode.SPEAKING;String rest=r.text.substring(Math.min(spoken,r.text.length()));
                     if(rest.trim().isEmpty())speech.mark("final"+id);else speak(rest,"final"+id,ToneTag.toneAt(spoken)!=null?ToneTag.toneAt(spoken):r.tone);
@@ -251,6 +251,26 @@ public final class FloatingPetService extends Service implements RecognitionList
             }
         });
     }
+    /** Whether Milo's words appear in the bubble while she speaks (Setup → Floating pet). */
+    boolean showWords(){return prefs.getBoolean("pet_words",true);}
+
+    /* ---- listening and thinking dots, and a quiet start without the recognizer's beep ---- */
+    int dotFrame;
+    final Runnable dots=new Runnable(){public void run(){
+        if(bubble==null||(mode!=Mode.LISTENING&&mode!=Mode.THINKING))return;
+        String[] frames={"●  ○  ○","○  ●  ○","○  ○  ●","○  ●  ○"};dotFrame=(dotFrame+1)%frames.length;
+        setBubble(frames[dotFrame]);bubble.setContentDescription(mode==Mode.LISTENING?"Listening":"Thinking");ui.postDelayed(this,320);}};
+    void showDots(){ui.removeCallbacks(dots);dotFrame=-1;dots.run();}
+    static final int[] BEEP_STREAMS={android.media.AudioManager.STREAM_MUSIC,android.media.AudioManager.STREAM_SYSTEM};
+    boolean beepMuted;
+    /** Google's recognizer beeps each time listening starts; Milo mutes that moment and restores the volume right after. */
+    void muteBeep(){
+        if(!beepMuted){beepMuted=true;android.media.AudioManager am=getSystemService(android.media.AudioManager.class);
+            for(int s:BEEP_STREAMS)try{am.adjustStreamVolume(s,android.media.AudioManager.ADJUST_MUTE,0);}catch(RuntimeException ignored){}}
+        ui.removeCallbacks(unmute);ui.postDelayed(unmute,1500);
+    }
+    final Runnable unmute=()->{if(!beepMuted)return;beepMuted=false;android.media.AudioManager am=getSystemService(android.media.AudioManager.class);
+        for(int s:BEEP_STREAMS)try{am.adjustStreamVolume(s,android.media.AudioManager.ADJUST_UNMUTE,0);}catch(RuntimeException ignored){}};
     String language(){return MiloVoice.locale(prefs).getDisplayLanguage(Locale.ENGLISH);}
     String voiceContext(){return "Current mood: "+prefs.getString("mood","Okay")+". Interests: "+prefs.getString("interests","")+". Current goal: "+prefs.getString("goal","")+". Hands-free voice chat through the floating pet: keep casual answers short, but tell full stories and full motivational talks when asked.";}
     void speak(String words,String utterance,String chunkTone){
@@ -270,11 +290,11 @@ public final class FloatingPetService extends Service implements RecognitionList
         mode=Mode.IDLE;talking=false;turn++;
         if(recognizer!=null)recognizer.cancel();if(speech!=null)speech.stop();if(face!=null)face.setTalking(false);if(generating)LiteRtLocalAi.cancel();
         if(face!=null){face.setLevel(0);face.setExpression(idleExpression());}
-        setBubble(message);ui.postDelayed(hideBubble,6000);goForeground(false);
+        ui.removeCallbacks(unmute);unmute.run();setBubble(message);ui.postDelayed(hideBubble,6000);goForeground(false);
     }
 
     @Override public void onDestroy(){
-        visible=false;talking=false;current=null;turn++;ui.removeCallbacksAndMessages(null);
+        visible=false;talking=false;current=null;turn++;ui.removeCallbacksAndMessages(null);unmute.run();
         if(prefs!=null)prefs.unregisterOnSharedPreferenceChangeListener(prefsChanged);
         if(recognizer!=null){recognizer.cancel();recognizer.destroy();recognizer=null;}
         if(speech!=null){speech.shutdown();speech=null;}

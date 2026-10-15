@@ -13,17 +13,17 @@ final class MiloVoice {
 
     /** How Milo sounds before any emotion: a voice gender, pitch, speed, loudness, an effect and a matching AI voice. */
     static final class Character{
-        final String id,name,gender,effect,aiVoice;final float pitch,rate,volume;
-        Character(String id,String name,String gender,float pitch,float rate,float volume,String effect,String aiVoice){this.id=id;this.name=name;this.gender=gender;this.pitch=pitch;this.rate=rate;this.volume=volume;this.effect=effect;this.aiVoice=aiVoice;}
+        final String id,name,gender,effect,aiVoice,cloudVoice;final float pitch,rate,volume;
+        Character(String id,String name,String gender,float pitch,float rate,float volume,String effect,String aiVoice,String cloudVoice){this.id=id;this.name=name;this.gender=gender;this.pitch=pitch;this.rate=rate;this.volume=volume;this.effect=effect;this.aiVoice=aiVoice;this.cloudVoice=cloudVoice;}
     }
     static final Character[] CHARACTERS={
-        new Character("sweet_girl","Sweet Girl","f",1.16f,0.97f,1f,"none","af_heart"),
-        new Character("cartoon_fairy","Cartoon Fairy","f",1.38f,1.06f,1f,"sparkle","af_bella"),
-        new Character("tiny_pixie","Tiny Pixie","f",1.75f,1.1f,1f,"sparkle","af_nicole"),
-        new Character("chechi","Chechi · gentle big sister","f",1.02f,0.92f,0.95f,"none","af_sarah"),
-        new Character("playful_kid","Playful Kid","f",1.3f,1.1f,1f,"none","af_sky"),
-        new Character("robot_buddy","Robot Buddy","m",0.98f,1f,1f,"robot","am_michael"),
-        new Character("brave_boy","Brave Boy","m",1.08f,1.02f,1f,"none","am_puck"),
+        new Character("sweet_girl","Sweet Girl","f",1.04f,0.98f,1f,"none","af_heart","Leda"),
+        new Character("cartoon_fairy","Cartoon Fairy","f",1.38f,1.06f,1f,"sparkle","af_bella","Zephyr"),
+        new Character("tiny_pixie","Tiny Pixie","f",1.75f,1.1f,1f,"sparkle","af_nicole","Laomedeia"),
+        new Character("chechi","Chechi · gentle big sister","f",1.02f,0.92f,0.95f,"none","af_sarah","Sulafat"),
+        new Character("playful_kid","Playful Kid","f",1.3f,1.1f,1f,"none","af_sky","Autonoe"),
+        new Character("robot_buddy","Robot Buddy","m",0.98f,1f,1f,"robot","am_michael","Charon"),
+        new Character("brave_boy","Brave Boy","m",1.08f,1.02f,1f,"none","am_puck","Puck"),
     };
     static Character character(SharedPreferences p){String id=p.getString("voice_character",CHARACTERS[0].id);for(Character c:CHARACTERS)if(c.id.equals(id))return c;return CHARACTERS[0];}
 

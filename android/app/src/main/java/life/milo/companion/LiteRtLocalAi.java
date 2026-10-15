@@ -47,7 +47,7 @@ final class LiteRtLocalAi extends AiProvider {
     private static void closeAll(){closeAfterUse=false;closeConversation();if(engine!=null){try{engine.close();}catch(Throwable ignored){}engine=null;engineKey=null;backend="";}}
 
     /** Loads the model ahead of the first question, e.g. while the user is still speaking. */
-    static void warm(Context c){if(!ready(c))return;lock.lock();try{engine(c.getApplicationContext());}catch(Throwable e){Log.w(TAG,"warm-up failed: "+e);}finally{lock.unlock();}}
+    static void warm(Context c){if(!ready(c))return;lock.lock();try{engine(c.getApplicationContext());}catch(Throwable e){Log.w(TAG,"warm-up failed: "+e);}finally{if(closeAfterUse)closeAll();lock.unlock();}}
 
     private static Engine engine(Context c)throws Exception{
         if(closeAfterUse)closeAll();

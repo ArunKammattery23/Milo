@@ -77,7 +77,8 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
         android.util.Log.i("MiloLocalAi","story words="+storyWords+" pep words="+pepWords);android.util.Log.i("MiloLocalAi","STORY: "+story.text);
         assertTrue("a story should be long, got "+storyWords+" words",storyWords>=120);assertTrue("a pep talk should be full, got "+pepWords+" words",pepWords>=60);
         android.util.Log.i("MiloLocalAi","EN1: "+first.text);android.util.Log.i("MiloLocalAi","EN2: "+second.text);android.util.Log.i("MiloLocalAi","ML: "+ml.text);
-        LiteRtLocalAi.release();assertNull(LiteRtLocalAi.engine);
+        // A background preload may still hold the model; release then waits for it.
+        LiteRtLocalAi.release();long until=android.os.SystemClock.uptimeMillis()+30000;while(LiteRtLocalAi.engine!=null&&android.os.SystemClock.uptimeMillis()<until)android.os.SystemClock.sleep(200);assertNull(LiteRtLocalAi.engine);
     }
     /** Floating pet end to end with Gemma 4: a Malayalam sentence in, spoken Malayalam reply out, with live expressions. */
     public void testFloatingPetTalksInMalayalamWithExpressions() throws Throwable {
@@ -137,11 +138,23 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
         e=android.view.MotionEvent.obtain(down,down+80,android.view.MotionEvent.ACTION_UP,x,y,0);e.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);ui.injectInputEvent(e,true);e.recycle();
         end=android.os.SystemClock.uptimeMillis()+5000;while(pet.mode!=FloatingPetService.Mode.LISTENING&&android.os.SystemClock.uptimeMillis()<end)android.os.SystemClock.sleep(50);
         assertEquals("tap should start listening",FloatingPetService.Mode.LISTENING,pet.mode);
-        android.os.SystemClock.sleep(700);
+        assertEquals("listening shows dots, not words","●  ○  ○".length(),pet.bubble.getText().length());
+        // Milo mutes the speaker for the recognizer's start beep; the question is played after it is restored.
+        end=android.os.SystemClock.uptimeMillis()+3000;while(pet.beepMuted&&android.os.SystemClock.uptimeMillis()<end)android.os.SystemClock.sleep(50);
+        assertFalse("volume should be restored after the start beep",pet.beepMuted);
+        android.os.SystemClock.sleep(200);
         android.media.AudioManager audio=a.getSystemService(android.media.AudioManager.class);int volume=audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
         audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,Math.max(volume,audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)*2/3),0);
-        android.media.MediaPlayer player=new android.media.MediaPlayer();player.setAudioAttributes(new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).build());player.setDataSource(question.getPath());player.prepare();player.start();
-        long played=android.os.SystemClock.uptimeMillis();while(player.isPlaying())android.os.SystemClock.sleep(20);long spoke=android.os.SystemClock.uptimeMillis();player.release();audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,volume,0);
+        // Played through the phone speaker; if the recognizer gave up too early, play the question once more.
+        long played=0,spoke=0;
+        for(int attempt=0;attempt<2;attempt++){
+            long w=android.os.SystemClock.uptimeMillis()+3000;while(pet.beepMuted&&android.os.SystemClock.uptimeMillis()<w)android.os.SystemClock.sleep(50);android.os.SystemClock.sleep(200);
+            android.media.MediaPlayer player=new android.media.MediaPlayer();player.setAudioAttributes(new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).build());player.setDataSource(question.getPath());player.prepare();player.start();
+            played=android.os.SystemClock.uptimeMillis();while(player.isPlaying())android.os.SystemClock.sleep(20);spoke=android.os.SystemClock.uptimeMillis();player.release();audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,volume,0);
+            long check=android.os.SystemClock.uptimeMillis()+4000;while(pet.mode==FloatingPetService.Mode.LISTENING&&android.os.SystemClock.uptimeMillis()<check)android.os.SystemClock.sleep(50);
+            if(pet.mode!=FloatingPetService.Mode.LISTENING)break;
+            android.util.Log.i("MiloPet","voice loop: question not caught, playing it again");
+        }
         long firstSpeech=-1;java.util.LinkedHashSet<String> seen=new java.util.LinkedHashSet<>();end=spoke+45000;
         while(android.os.SystemClock.uptimeMillis()<end){String ex=pet.face==null?"":pet.face.expression();seen.add(ex);if(pet.face!=null&&pet.face.talking()&&firstSpeech<0)firstSpeech=android.os.SystemClock.uptimeMillis()-spoke;if(pet.history.size()>=2&&pet.mode!=FloatingPetService.Mode.THINKING&&pet.mode!=FloatingPetService.Mode.SPEAKING)break;android.os.SystemClock.sleep(40);}
         a.startService(new android.content.Intent(a,FloatingPetService.class).setAction("STOP_TALK"));
@@ -234,6 +247,27 @@ public class MiloSmokeTest extends ActivityInstrumentationTestCase2<MainActivity
         sp[0].refresh(null);sp[0].beginReply();sp[0].speak("Hello! This is Milo's new voice.","happy","probe-final");
         assertTrue("speech did not finish",played.await(30,java.util.concurrent.TimeUnit.SECONDS));
         assertTrue("onStart should fire for the sound and the sentence",starts[0]>=2);assertTrue("lip sync levels should rise, max="+maxLevel[0],maxLevel[0]>0.2f);
+        sp[0].shutdown();
+    }
+    /** Human voice through the owner's saved Gemini key (skipped without one); saves files/voice-samples/human-*.wav. */
+    public void testHumanVoiceWithGeminiKey() throws Throwable {
+        android.content.Context c=getInstrumentation().getTargetContext();android.content.SharedPreferences p=c.getSharedPreferences("milo",0);
+        if(KeyVault.loadForProvider(c,AiProvider.GEMINI).isEmpty()){android.util.Log.i("MiloVoiceTest","human voice skipped: no Gemini key");return;}
+        java.io.File out=new java.io.File(c.getExternalFilesDir(null),"voice-samples");out.mkdirs();
+        java.util.concurrent.CountDownLatch ready=new java.util.concurrent.CountDownLatch(1);MiloSpeaker[] sp={null};
+        getInstrumentation().runOnMainSync(()->sp[0]=new MiloSpeaker(c,p,new MiloSpeaker.Listener(){public void onStart(String id,String tone){}public void onDone(String id){}public void onLevel(float l){}},ready::countDown));
+        assertTrue(ready.await(20,java.util.concurrent.TimeUnit.SECONDS));
+        String[][] cases={{"human-en-sweet-girl-happy","en-US","happy","Hehe! Hi, I'm Milo. I'm so happy you're here with me today!"},
+            {"human-ml-sweet-girl-happy","ml-IN","happy","ഹായ്! നിന്നെ കണ്ടതിൽ ഒരുപാട് സന്തോഷം."},
+            {"human-ml-sweet-girl-sad","ml-IN","sad","അയ്യോ… എനിക്ക് വിഷമമുണ്ട്. അത് ശരിക്കും ബുദ്ധിമുട്ടാണ്."}};  // three requests: Google's free tier allows three per minute
+        for(String[] k:cases){
+            p.edit().putString("voice_language",k[1]).putString("voice_character","sweet_girl").putBoolean("voice_human",true).commit();
+            long t0=android.os.SystemClock.elapsedRealtime();MiloSpeaker.Clip clip=sp[0].clip(k[3],k[2],"human-test");long ms=android.os.SystemClock.elapsedRealtime()-t0;
+            android.util.Log.i("MiloVoiceTest",k[0]+" engine="+sp[0].lastEngine+" render="+ms+"ms error="+GeminiVoice.lastError+" model="+p.getString("cloud_tts_model",""));
+            if(GeminiVoice.lastError.contains("429")||GeminiVoice.lastError.contains("per minute")){android.util.Log.i("MiloVoiceTest","human voice skipped: Google rate limit");sp[0].shutdown();return;}
+            assertEquals("Gemini voice failed: "+GeminiVoice.lastError,"human",sp[0].lastEngine);
+            writeWav(new java.io.File(out,k[0]+".wav"),clip.pcm,clip.rate);
+        }
         sp[0].shutdown();
     }
     static void writeWav(java.io.File f,short[] pcm,int rate)throws java.io.IOException{
