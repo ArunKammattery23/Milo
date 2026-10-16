@@ -1,0 +1,503 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "set_reminder",
+      "description": "Reminds the user at a time: the pet appears and says the task aloud.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string",
+            "description": "What to do, short, in the user's language. Malayalam uses the 'to do' form, e.g. 'അമ്മയെ വിളിക്കാൻ'."
+          },
+          "time": {
+            "type": "string",
+            "description": "When; see TIME FORMATS."
+          },
+          "repeat": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekdays",
+              "weekly",
+              "monthly",
+              "yearly"
+            ],
+            "description": "Only when the user asks for a repeating reminder."
+          },
+          "minutes_before": {
+            "type": "integer",
+            "description": "Early warning in minutes, only when the user asks for one."
+          }
+        },
+        "required": [
+          "task",
+          "time"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "set_alarm",
+      "description": "Sets a wake-up alarm at a time, or a countdown timer for a duration.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "time": {
+            "type": "string",
+            "description": "Alarm time; see TIME FORMATS."
+          },
+          "duration": {
+            "type": "string",
+            "description": "Timer length, e.g. '10 minutes', '1 hour 30 minutes'."
+          },
+          "label": {
+            "type": "string",
+            "description": "Optional label, e.g. 'rice', 'gym'."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "cancel_reminder",
+      "description": "Removes a reminder, alarm or event. Words from it, or 'all'.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "Words from the item, or 'all'."
+          }
+        },
+        "required": [
+          "item"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "show_plan",
+      "description": "Reads out the reminders, events and lists for a day.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "description": "'today', 'tomorrow', a weekday like 'monday', or YYYY-MM-DD. Default 'today'."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "create_event",
+      "description": "Adds an event to the phone's calendar.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Short title in the user's language."
+          },
+          "time": {
+            "type": "string",
+            "description": "Start; see TIME FORMATS."
+          },
+          "place": {
+            "type": "string",
+            "description": "Optional place."
+          },
+          "people": {
+            "type": "string",
+            "description": "Optional, comma separated names."
+          }
+        },
+        "required": [
+          "title",
+          "time"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "save_note",
+      "description": "Saves something the user wants remembered: a note, a fact, where something is kept, a birthday.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The fact, short, in the user's language."
+          }
+        },
+        "required": [
+          "text"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "find_note",
+      "description": "Looks up something the user earlier asked Milo to remember.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "What they want to know, short."
+          }
+        },
+        "required": [
+          "question"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "add_to_list",
+      "description": "Adds items to a list such as shopping or to-do.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "string",
+            "description": "'shopping', 'to-do', or the list name the user says."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Each item separately, in the user's words."
+          }
+        },
+        "required": [
+          "list",
+          "items"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "send_message",
+      "description": "Prepares a WhatsApp or SMS message; the user taps Send.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "contact": {
+            "type": "string",
+            "description": "The person, as the user says them, in the basic form: 'അമ്മ', 'Amma', 'mom', 'Rahul'."
+          },
+          "message": {
+            "type": "string",
+            "description": "The exact message to send, in direct speech, in the language the user wants."
+          },
+          "app": {
+            "type": "string",
+            "enum": [
+              "whatsapp",
+              "sms"
+            ],
+            "description": "whatsapp unless the user says SMS."
+          }
+        },
+        "required": [
+          "contact",
+          "message"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "send_email",
+      "description": "Prepares an email; the user taps Send.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Name, relation or email address as said."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Short subject."
+          },
+          "body": {
+            "type": "string",
+            "description": "Short, polite email text."
+          }
+        },
+        "required": [
+          "to",
+          "body"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "call_contact",
+      "description": "Opens the call screen for a contact; the user confirms.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "contact": {
+            "type": "string",
+            "description": "The person in the basic form, as in send_message."
+          },
+          "app": {
+            "type": "string",
+            "enum": [
+              "phone",
+              "whatsapp"
+            ],
+            "description": "phone unless the user says WhatsApp."
+          },
+          "video": {
+            "type": "boolean",
+            "description": "true only for a video call."
+          }
+        },
+        "required": [
+          "contact"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "share_location",
+      "description": "Prepares a WhatsApp message with the user's current location.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "contact": {
+            "type": "string",
+            "description": "The person in the basic form."
+          }
+        },
+        "required": [
+          "contact"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "save_contact",
+      "description": "Remembers who a family member or friend is.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "relation": {
+            "type": "string",
+            "description": "e.g. 'mother', 'elder sister', 'friend', 'boss'."
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "open_app",
+      "description": "Opens an installed app.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "description": "App name in English, e.g. 'YouTube', 'WhatsApp', 'Google Pay'."
+          }
+        },
+        "required": [
+          "app"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "phone_setting",
+      "description": "Turns a phone setting on or off.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "setting": {
+            "type": "string",
+            "enum": [
+              "flashlight",
+              "wifi",
+              "bluetooth",
+              "silent",
+              "do_not_disturb",
+              "volume_up",
+              "volume_down"
+            ]
+          },
+          "on": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "setting"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "navigate",
+      "description": "Opens Maps with directions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "place": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "driving",
+              "walking",
+              "bus",
+              "bike"
+            ]
+          }
+        },
+        "required": [
+          "place"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "play_media",
+      "description": "Plays a song, video, playlist or radio.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "app": {
+            "type": "string",
+            "enum": [
+              "youtube",
+              "spotify",
+              "any"
+            ]
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "web_search",
+      "description": "Searches the web and opens the results.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "phone_status",
+      "description": "Tells the current time, date, day and battery level.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "remember_name",
+      "description": "Saves the name the user wants to be called.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "emergency_help",
+      "description": "Danger or a medical emergency: shows the emergency number 112 and starts a call to a saved family member.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "situation": {
+            "type": "string",
+            "description": "A few words about what is happening."
+          }
+        },
+        "required": [
+          "situation"
+        ]
+      }
+    }
+  }
+]

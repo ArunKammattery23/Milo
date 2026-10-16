@@ -1,0 +1,25 @@
+{
+  "rows": 800,
+  "languages": {
+    "ml": 400,
+    "en": 240,
+    "mixed": 160
+  },
+  "tools": {
+    "set_reminder": 400,
+    "set_alarm": 100,
+    "create_event": 150,
+    "save_note": 50,
+    "find_note": 50,
+    "add_to_list": 50
+  },
+  "families": 75,
+  "max_say_words": 11,
+  "malayalam_review_required": true,
+  "say_requires_success": true,
+  "notes": [
+    "Synthetic authored patterns and slot combinations, not human conversations.",
+    "Post-action say strings require successful tool results; find_note says only that it will look.",
+    "No audio, voice training, external actions or source repository edits performed."
+  ]
+}

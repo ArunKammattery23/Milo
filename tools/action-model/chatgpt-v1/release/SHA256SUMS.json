@@ -1,0 +1,20 @@
+{
+  "android-time-report.json": "90fc67a9c91c6241f5ac07471744a13908e4e961d81e0fc55818e9a776720ac3",
+  "challenge.jsonl": "300317ecc752a59fcad20eb93881cce7e0b38a69fa2561f52312f4ce30bb0e05",
+  "challenge.raw.jsonl": "6348e25727bd22645859a7ac6cd443414cb35b247042e6cd7466d5ada909c36e",
+  "confirmations.jsonl": "61910b5d4d67466d5acaa0ef7ca47779fc8844448edd6a47b921e6c33e12c8b8",
+  "milo-chatgpt.jsonl": "3de5cb35f9628b1743e16d76961a05c58050a637df92871cf1d8805535ed8948",
+  "provenance.jsonl": "5d3facdbdf8b7aac2122d8030df94f5328e22374ce548aca3ee7040e69b969d5",
+  "REVIEW.md": "ab3b107f07e7c8c80fdeb2f8b35e9671f9aac3d11cc4585d93e1cc63ba826ada",
+  "test.completion.jsonl": "5157b4269241095cff8aee5c994a56e74228d7cb0cff08817460341c26d24f42",
+  "test.jsonl": "ab894d8f864aafcf1de477b11a04787e55d35f143931e74ee2a564bdf2c18215",
+  "test.raw.jsonl": "a7c58e96df7c9281c32da241c69ce303d771cd2492b0d0b789288d5a44828ea8",
+  "tools.json": "6058aa7809dd4722266f6cb8402df43801305f8621ace9d8b71ab7db1790611e",
+  "train.completion.jsonl": "a7a5823fd2be27d14f7c7a452002cb30f90bbad7f2875ad59367ee8358b1499f",
+  "train.jsonl": "2cbf22de351c84fb9e8d548748509ce6415cc9b670fcd9cd8dbb52b61a82f818",
+  "train.raw.jsonl": "f7c8e6c5cf56e2b00230ca9d171f187cc87b01ad7e2ad63e9bbc12542e7278c0",
+  "validation-report.json": "e119be16d15adf7de775985920a010f13dfd6ff82f6666f56f47cb1510623288",
+  "validation.completion.jsonl": "6fecef519202c59e254888c44ee57a58db65484b4a9c1ce803ebeb1009bd83ff",
+  "validation.jsonl": "d8ba7d2c0998f6dcf18e99e28e56de8b09696f3da80207984b980153c6557ff4",
+  "validation.raw.jsonl": "ff2bc1d05dc771593af83653c3a7316d4e2c056c3a0a50bb49b08d1c02c35a26"
+}
